@@ -112,9 +112,55 @@ SYS画面では、GPS（アメリカ）・GLONASS（ロシア）・Galileo（欧
 pio test -e native
 ```
 
-### Milestone 3 - UDP Telemetry
+### Milestone 3 - UDP Telemetry ✅
 
 M5StackからWi-Fi経由でMacへTelemetryをUDP送信します。
+
+Milestone 4でYAMCSへそのまま取り込めるよう、パケットは実際の衛星でも使われる **CCSDS Space Packet** の形式にしています。1秒に1回、48バイトのパケットを送ります。
+
+#### セットアップ
+
+1. Wi-Fiと送信先の設定ファイルを作ります。`include/secrets.h` は `.gitignore` に入っているので、コミットされません。
+
+   ```sh
+   cp include/secrets.example.h include/secrets.h
+   ```
+
+2. `include/secrets.h` にWi-FiのSSIDとパスワード、送信先のMacのIPアドレスを書きます。MacのIPアドレスは `ipconfig getifaddr en0` で確認できます。ESP32は2.4GHz帯のWi-Fiにしか接続できません。
+
+3. Macで受信スクリプトを起動します（Python標準ライブラリのみで動きます）。初回はmacOSのファイアウォールが受信を許可するか尋ねてきます。
+
+   ```sh
+   python3 tools/udp_receiver.py
+   ```
+
+   ```text
+   [192.168.1.23] apid=100 seq=   42 2026-10-05T02:13:45.000Z lat=33.590355 lon=130.401716 alt=12.3m sats=12 fix=GPS(1) type=3D rmc=A uptime=43.0s ok=1520 err=0
+   ```
+
+M5StackのINFO画面の下部にWi-Fiの接続状態と送信したパケット数（`tx=`）が表示されます。
+
+#### パケット形式
+
+数値はすべてビッグエンディアンです。詳しくは [lib/TelemetryPacket](lib/TelemetryPacket/src/TelemetryPacket.h) を参照してください。
+
+| Offset | Size | 型 | 内容 |
+| --- | --- | --- | --- |
+| 0 | 6 | - | CCSDS Primary Header（TM、APID=100、Sequence count） |
+| 6 | 4 | uint32 | UTC時刻（Unix秒。無効なら0） |
+| 10 | 2 | uint16 | UTCミリ秒 |
+| 12 | 8 | float64 | 緯度（度） |
+| 20 | 8 | float64 | 経度（度） |
+| 28 | 4 | float32 | 海抜高度（m） |
+| 32 | 1 | uint8 | 測位に使用している衛星数 |
+| 33 | 1 | uint8 | Fix quality（GGA） |
+| 34 | 1 | uint8 | Fix type（1=No fix, 2=2D, 3=3D） |
+| 35 | 1 | uint8 | Flags（bit0:時刻有効, bit1:日付有効, bit2:位置有効, bit3:高度有効, bit4:RMC Active） |
+| 36 | 4 | uint32 | 起動からの経過時間（ms） |
+| 40 | 4 | uint32 | 正常に受信したNMEAセンテンス数 |
+| 44 | 4 | uint32 | チェックサムエラー数 |
+
+Sequence countは送信のたびに1増えます（14bitで一周）。受信スクリプトはこの番号の飛びからパケットロスを検出します。
 
 ### Milestone 4 - YAMCS
 

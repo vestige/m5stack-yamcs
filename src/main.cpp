@@ -1,8 +1,17 @@
 #include <Arduino.h>
 #include <M5Unified.h>
 #include <NmeaParser.h>
+#include <TelemetryPacket.h>
+#include <WiFi.h>
+#include <WiFiUdp.h>
 
 #include "TelemetryDisplay.h"
+
+#if __has_include("secrets.h")
+#include "secrets.h"
+#else
+#error "include/secrets.h がありません。include/secrets.example.h をコピーしてWi-Fiと送信先を設定してください"
+#endif
 
 // M5Stack Core の Grove Port A
 // GPS Unit: TX → GPIO22 (M5Stack RX)
@@ -20,8 +29,40 @@ static const uint32_t NO_DATA_TIMEOUT_MS = 3000;
 HardwareSerial GPS(2);
 NmeaParser parser;
 TelemetryDisplay display;
+WiFiUDP udp;
 uint32_t lastReportMs = 0;
 uint32_t lastSentenceMs = 0;
+uint16_t packetSequence = 0;
+uint32_t packetsSent = 0;
+
+// テレメトリをCCSDS Space PacketにしてUDPで送る。Wi-Fi未接続なら送らない。
+void sendTelemetry() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  uint8_t packet[TelemetryPacket::kPacketSize];
+  size_t size = TelemetryPacket::encode(parser.telemetry(), parser.validSentences(),
+                                        parser.checksumErrors(), millis(), packetSequence, packet,
+                                        sizeof(packet));
+  udp.beginPacket(TELEMETRY_HOST, TELEMETRY_PORT);
+  udp.write(packet, size);
+  if (udp.endPacket()) {
+    packetSequence = (packetSequence + 1) & 0x3FFF;
+    packetsSent++;
+  }
+}
+
+// 画面に出すWi-Fi/UDPの状態
+void updateLinkStatus() {
+  char text[64];
+  if (WiFi.status() == WL_CONNECTED) {
+    snprintf(text, sizeof(text), "UDP %s:%d  tx=%lu", TELEMETRY_HOST, TELEMETRY_PORT,
+             static_cast<unsigned long>(packetsSent));
+    display.setLinkStatus(text, true);
+  } else {
+    snprintf(text, sizeof(text), "WiFi connecting to %s ...", WIFI_SSID);
+    display.setLinkStatus(text, false);
+  }
+}
 
 void printTelemetry(const GnssTelemetry& t) {
   char line[192];
@@ -45,9 +86,10 @@ void printTelemetry(const GnssTelemetry& t) {
     snprintf(altitudeText, sizeof(altitudeText), "alt=%.1fm", t.altitude);
   }
 
-  snprintf(line, sizeof(line), "[TLM] %s %s %s sats=%u fix=%s(%u) type=%uD rmc=%c ok=%lu err=%lu",
+  const char* fixType = t.fixType == 3 ? "3D" : t.fixType == 2 ? "2D" : "NoFix";
+  snprintf(line, sizeof(line), "[TLM] %s %s %s sats=%u fix=%s(%u) type=%s rmc=%c ok=%lu err=%lu",
            timeText, positionText, altitudeText, t.satellites, NmeaParser::fixQualityName(t.fixQuality),
-           t.fixQuality, t.fixType, t.rmcActive ? 'A' : 'V',
+           t.fixQuality, fixType, t.rmcActive ? 'A' : 'V',
            static_cast<unsigned long>(parser.validSentences()),
            static_cast<unsigned long>(parser.checksumErrors()));
   Serial.println(line);
@@ -72,6 +114,13 @@ void setup() {
   GPS.begin(115200, SERIAL_8N1, GPS_RX, GPS_TX);
 
   display.begin();
+
+  // 接続はバックグラウンドで進み、切断されても自動で再接続する
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.printf("Connecting to WiFi \"%s\", telemetry -> %s:%d\n", WIFI_SSID, TELEMETRY_HOST,
+                TELEMETRY_PORT);
 
   Serial.println("Waiting for GPS data...");
 }
@@ -106,6 +155,8 @@ void loop() {
   if (now - lastReportMs >= TELEMETRY_INTERVAL_MS) {
     lastReportMs = now;
     printTelemetry(parser.telemetry());
+    sendTelemetry();
+    updateLinkStatus();
     display.draw(parser, receiving);
   } else if (pageChanged) {
     // ページ切り替えは次の更新を待たずにすぐ描画する

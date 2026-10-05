@@ -12,6 +12,9 @@ class TelemetryDisplay {
   void setPage(Page page) { page_ = page; }
   Page page() const { return page_; }
 
+  // INFO画面に出す通信状態 (ok=falseなら注意色で表示する)
+  void setLinkStatus(const char* text, bool ok);
+
   // receiving: 直近でNMEAを受信できているか
   void draw(const NmeaParser& parser, bool receiving);
 
@@ -25,4 +28,6 @@ class TelemetryDisplay {
 
   M5Canvas canvas_{&M5.Display};
   Page page_ = Page::Telemetry;
+  char linkStatus_[64] = "";
+  bool linkOk_ = false;
 };
