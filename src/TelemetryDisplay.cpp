@@ -8,7 +8,8 @@ const int kWidth = 320;
 const int kHeight = 240;
 const int kHeaderHeight = 36;
 const int kRowTop = 40;
-const int kRowHeight = 30;
+const int kRowHeight = 28;
+const int kLinkStatusY = 212;
 const int kValueX = 80;
 
 // ボタンA/B/Cの中心のx座標
@@ -58,6 +59,11 @@ void TelemetryDisplay::begin() {
   // Core(Basic)はPSRAMが無いので8bitカラーでメモリを節約する。
   canvas_.setColorDepth(8);
   canvas_.createSprite(kWidth, kHeight);
+}
+
+void TelemetryDisplay::setLinkStatus(const char* text, bool ok) {
+  snprintf(linkStatus_, sizeof(linkStatus_), "%s", text);
+  linkOk_ = ok;
 }
 
 void TelemetryDisplay::draw(const NmeaParser& parser, bool receiving) {
@@ -118,9 +124,14 @@ void TelemetryDisplay::drawTelemetryPage(const NmeaParser& parser) {
   snprintf(text, sizeof(text), "%u", t.satellites);
   drawRow(5, "SATS", text, t.satellites > 0 ? kValueColor : kInvalidColor);
 
-  // 受信したセンテンス数とチェックサムエラー数
+  // Wi-Fi / UDP の状態
   canvas_.setFont(&fonts::Font0);
   canvas_.setTextSize(1);
+  canvas_.setTextDatum(top_left);
+  canvas_.setTextColor(linkOk_ ? TFT_CYAN : TFT_ORANGE);
+  canvas_.drawString(linkStatus_, 10, kLinkStatusY);
+
+  // 受信したセンテンス数とチェックサムエラー数
   canvas_.setTextColor(kLabelColor);
   canvas_.setTextDatum(bottom_right);
   snprintf(text, sizeof(text), "NMEA ok=%lu err=%lu", static_cast<unsigned long>(parser.validSentences()),
