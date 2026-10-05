@@ -1,0 +1,15 @@
+services:
+  - class: org.yamcs.http.HttpServer
+    args:
+      port: 8090
+      address: "0.0.0.0"
+
+# データの保存先。yamcs:run の実行場所 (target/yamcs) からの相対パス。
+# `mvn clean` すると保存したテレメトリも消える。
+dataDir: yamcs-data
+
+instances:
+  - gnss
+
+# 署名などに使う、このYAMCSサーバ固有の秘密鍵 (ローカルでの学習用)
+secretKey: changeme

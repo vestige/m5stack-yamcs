@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  M5Stack GNSS テレメトリの Mission Database (XTCE)
+  パケット形式は lib/TelemetryPacket/src/TelemetryPacket.h と対応している。
+-->
+<SpaceSystem name="GNSS" xmlns="http://www.omg.org/spec/XTCE/20180204" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.omg.org/spec/XTCE/20180204 https://www.omg.org/spec/XTCE/20180204/SpaceSystem.xsd">
+	<TelemetryMetaData>
+		<ParameterTypeSet>
+			<!-- CCSDS Primary Header -->
+			<IntegerParameterType name="CCSDS_Version_Type" signed="false">
+				<IntegerDataEncoding sizeInBits="3" />
+			</IntegerParameterType>
+			<BooleanParameterType name="CCSDS_Type_Type" zeroStringValue="TM" oneStringValue="TC">
+				<IntegerDataEncoding sizeInBits="1" />
+			</BooleanParameterType>
+			<BooleanParameterType name="CCSDS_Sec_Hdr_Flag_Type" zeroStringValue="NotPresent" oneStringValue="Present">
+				<IntegerDataEncoding sizeInBits="1" />
+			</BooleanParameterType>
+			<IntegerParameterType name="CCSDS_APID_Type" signed="false">
+				<IntegerDataEncoding sizeInBits="11" />
+			</IntegerParameterType>
+			<EnumeratedParameterType name="CCSDS_Group_Flags_Type">
+				<IntegerDataEncoding sizeInBits="2" />
+				<EnumerationList>
+					<Enumeration value="0" label="Continuation" />
+					<Enumeration value="1" label="First" />
+					<Enumeration value="2" label="Last" />
+					<Enumeration value="3" label="Standalone" />
+				</EnumerationList>
+			</EnumeratedParameterType>
+			<IntegerParameterType name="CCSDS_Sequence_Count_Type" signed="false">
+				<IntegerDataEncoding sizeInBits="14" />
+			</IntegerParameterType>
+			<IntegerParameterType name="CCSDS_Packet_Length_Type" signed="false">
+				<UnitSet>
+					<Unit>octets</Unit>
+				</UnitSet>
+				<IntegerDataEncoding sizeInBits="16" />
+			</IntegerParameterType>
+
+			<!-- GNSS テレメトリ -->
+			<AbsoluteTimeParameterType name="Unix_Time_Type">
+				<Encoding units="seconds">
+					<IntegerDataEncoding sizeInBits="32" />
+				</Encoding>
+				<ReferenceTime>
+					<Epoch>UNIX</Epoch>
+				</ReferenceTime>
+			</AbsoluteTimeParameterType>
+			<IntegerParameterType name="Millisecond_Type" signed="false">
+				<UnitSet>
+					<Unit>ms</Unit>
+				</UnitSet>
+				<IntegerDataEncoding sizeInBits="16" />
+			</IntegerParameterType>
+			<FloatParameterType name="Degrees_Type" sizeInBits="64">
+				<UnitSet>
+					<Unit>deg</Unit>
+				</UnitSet>
+				<FloatDataEncoding sizeInBits="64" />
+			</FloatParameterType>
+			<FloatParameterType name="Altitude_Type" sizeInBits="32">
+				<UnitSet>
+					<Unit>m</Unit>
+				</UnitSet>
+				<FloatDataEncoding sizeInBits="32" />
+			</FloatParameterType>
+			<IntegerParameterType name="Satellites_Type" signed="false">
+				<IntegerDataEncoding sizeInBits="8" />
+				<!-- 衛星が4機未満では3D測位できないので警告する -->
+				<DefaultAlarm>
+					<StaticAlarmRanges>
+						<WarningRange minInclusive="4" />
+					</StaticAlarmRanges>
+				</DefaultAlarm>
+			</IntegerParameterType>
+			<EnumeratedParameterType name="Fix_Quality_Type">
+				<IntegerDataEncoding sizeInBits="8" />
+				<EnumerationList>
+					<Enumeration value="0" label="NoFix" />
+					<Enumeration value="1" label="GPS" />
+					<Enumeration value="2" label="DGPS" />
+					<Enumeration value="3" label="PPS" />
+					<Enumeration value="4" label="RTK" />
+					<Enumeration value="5" label="FloatRTK" />
+					<Enumeration value="6" label="Estimated" />
+					<Enumeration value="7" label="Manual" />
+					<Enumeration value="8" label="Simulation" />
+				</EnumerationList>
+			</EnumeratedParameterType>
+			<EnumeratedParameterType name="Fix_Type_Type">
+				<IntegerDataEncoding sizeInBits="8" />
+				<EnumerationList>
+					<Enumeration value="1" label="NoFix" />
+					<Enumeration value="2" label="2D" />
+					<Enumeration value="3" label="3D" />
+				</EnumerationList>
+				<!-- 測位できていなければ警告する -->
+				<DefaultAlarm>
+					<EnumerationAlarmList>
+						<EnumerationAlarm alarmLevel="warning" enumerationLabel="NoFix" />
+					</EnumerationAlarmList>
+				</DefaultAlarm>
+			</EnumeratedParameterType>
+			<IntegerParameterType name="Reserved_Type" signed="false">
+				<IntegerDataEncoding sizeInBits="3" />
+			</IntegerParameterType>
+			<BooleanParameterType name="Flag_Type">
+				<IntegerDataEncoding sizeInBits="1" />
+			</BooleanParameterType>
+			<IntegerParameterType name="Uptime_Type" signed="false">
+				<UnitSet>
+					<Unit>ms</Unit>
+				</UnitSet>
+				<IntegerDataEncoding sizeInBits="32" />
+			</IntegerParameterType>
+			<IntegerParameterType name="Counter_Type" signed="false">
+				<IntegerDataEncoding sizeInBits="32" />
+			</IntegerParameterType>
+		</ParameterTypeSet>
+
+		<ParameterSet>
+			<Parameter name="CCSDS_Version" parameterTypeRef="CCSDS_Version_Type" />
+			<Parameter name="CCSDS_Type" parameterTypeRef="CCSDS_Type_Type" />
+			<Parameter name="CCSDS_Sec_Hdr_Flag" parameterTypeRef="CCSDS_Sec_Hdr_Flag_Type" />
+			<Parameter name="CCSDS_APID" parameterTypeRef="CCSDS_APID_Type" />
+			<Parameter name="CCSDS_Group_Flags" parameterTypeRef="CCSDS_Group_Flags_Type" />
+			<Parameter name="CCSDS_Sequence_Count" parameterTypeRef="CCSDS_Sequence_Count_Type" />
+			<Parameter name="CCSDS_Packet_Length" parameterTypeRef="CCSDS_Packet_Length_Type" />
+
+			<Parameter name="UtcTime" parameterTypeRef="Unix_Time_Type" shortDescription="GNSSから得たUTC時刻 (無効なら1970-01-01)" />
+			<Parameter name="UtcMillisecond" parameterTypeRef="Millisecond_Type" shortDescription="UTC時刻のミリ秒" />
+			<Parameter name="Latitude" parameterTypeRef="Degrees_Type" shortDescription="緯度 (北緯が正)" />
+			<Parameter name="Longitude" parameterTypeRef="Degrees_Type" shortDescription="経度 (東経が正)" />
+			<Parameter name="Altitude" parameterTypeRef="Altitude_Type" shortDescription="海抜高度" />
+			<Parameter name="Satellites" parameterTypeRef="Satellites_Type" shortDescription="測位に使用している衛星数" />
+			<Parameter name="FixQuality" parameterTypeRef="Fix_Quality_Type" shortDescription="測位品質 (GGA)" />
+			<Parameter name="FixType" parameterTypeRef="Fix_Type_Type" shortDescription="測位の次元 (GSA)" />
+			<Parameter name="FlagsReserved" parameterTypeRef="Reserved_Type" />
+			<Parameter name="RmcActive" parameterTypeRef="Flag_Type" shortDescription="RMCのステータスがA (Active)" />
+			<Parameter name="AltitudeValid" parameterTypeRef="Flag_Type" shortDescription="高度が有効" />
+			<Parameter name="PositionValid" parameterTypeRef="Flag_Type" shortDescription="緯度経度が有効" />
+			<Parameter name="DateValid" parameterTypeRef="Flag_Type" shortDescription="日付が有効" />
+			<Parameter name="TimeValid" parameterTypeRef="Flag_Type" shortDescription="時刻が有効" />
+			<Parameter name="Uptime" parameterTypeRef="Uptime_Type" shortDescription="M5Stackの起動からの経過時間" />
+			<Parameter name="NmeaValidSentences" parameterTypeRef="Counter_Type" shortDescription="正常に受信したNMEAセンテンス数" />
+			<Parameter name="NmeaChecksumErrors" parameterTypeRef="Counter_Type" shortDescription="NMEAのチェックサムエラー数" />
+		</ParameterSet>
+
+		<ContainerSet>
+			<SequenceContainer name="CCSDSPacket" abstract="true">
+				<EntryList>
+					<ParameterRefEntry parameterRef="CCSDS_Version" />
+					<ParameterRefEntry parameterRef="CCSDS_Type" />
+					<ParameterRefEntry parameterRef="CCSDS_Sec_Hdr_Flag" />
+					<ParameterRefEntry parameterRef="CCSDS_APID" />
+					<ParameterRefEntry parameterRef="CCSDS_Group_Flags" />
+					<ParameterRefEntry parameterRef="CCSDS_Sequence_Count" />
+					<ParameterRefEntry parameterRef="CCSDS_Packet_Length" />
+				</EntryList>
+			</SequenceContainer>
+
+			<!-- APID 100: GNSSテレメトリ (offset 6 以降) -->
+			<SequenceContainer name="GnssTelemetry">
+				<EntryList>
+					<ParameterRefEntry parameterRef="UtcTime" />
+					<ParameterRefEntry parameterRef="UtcMillisecond" />
+					<ParameterRefEntry parameterRef="Latitude" />
+					<ParameterRefEntry parameterRef="Longitude" />
+					<ParameterRefEntry parameterRef="Altitude" />
+					<ParameterRefEntry parameterRef="Satellites" />
+					<ParameterRefEntry parameterRef="FixQuality" />
+					<ParameterRefEntry parameterRef="FixType" />
+					<!-- Flags (1byte): 上位ビットから reserved(3), RMC, ALT, POS, DATE, TIME -->
+					<ParameterRefEntry parameterRef="FlagsReserved" />
+					<ParameterRefEntry parameterRef="RmcActive" />
+					<ParameterRefEntry parameterRef="AltitudeValid" />
+					<ParameterRefEntry parameterRef="PositionValid" />
+					<ParameterRefEntry parameterRef="DateValid" />
+					<ParameterRefEntry parameterRef="TimeValid" />
+					<ParameterRefEntry parameterRef="Uptime" />
+					<ParameterRefEntry parameterRef="NmeaValidSentences" />
+					<ParameterRefEntry parameterRef="NmeaChecksumErrors" />
+				</EntryList>
+				<BaseContainer containerRef="CCSDSPacket">
+					<RestrictionCriteria>
+						<ComparisonList>
+							<Comparison parameterRef="CCSDS_Type" value="TM" />
+							<Comparison parameterRef="CCSDS_APID" value="100" />
+						</ComparisonList>
+					</RestrictionCriteria>
+				</BaseContainer>
+			</SequenceContainer>
+		</ContainerSet>
+	</TelemetryMetaData>
+</SpaceSystem>
