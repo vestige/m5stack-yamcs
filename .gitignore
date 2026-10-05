@@ -16,3 +16,10 @@
 .env
 .env.*
 include/secrets.h
+
+# YAMCS (mvn yamcs:run の出力と保存データ)
+yamcs/target/
+
+# scripts/start.sh の実行時ファイル
+.run/
+logs/

@@ -138,6 +138,8 @@ Milestone 4でYAMCSへそのまま取り込めるよう、パケットは実際�
    [192.168.1.23] apid=100 seq=   42 2026-10-05T02:13:45.000Z lat=33.590355 lon=130.401716 alt=12.3m sats=12 fix=GPS(1) type=3D rmc=A uptime=43.0s ok=1520 err=0
    ```
 
+   YAMCSと一緒に動かす場合は、Milestone 4の `scripts/start.sh` を使ってください。受信スクリプトも一緒に起動されます。
+
 M5StackのINFO画面の下部にWi-Fiの接続状態と送信したパケット数（`tx=`）が表示されます。
 
 #### パケット形式
@@ -162,9 +164,53 @@ M5StackのINFO画面の下部にWi-Fiの接続状態と送信したパケット�
 
 Sequence countは送信のたびに1増えます（14bitで一周）。受信スクリプトはこの番号の飛びからパケットロスを検出します。
 
-### Milestone 4 - YAMCS
+### Milestone 4 - YAMCS ✅
 
 UDPで受信したTelemetryをYAMCSへ取り込み、Mission Databaseでパラメータとして定義します。
+
+```text
+M5Stack ──UDP:10015──▶ tools/udp_receiver.py ──UDP:10016──▶ YAMCS ──▶ Web UI (http://localhost:8090)
+                        (受信ログ logs/udp_receiver.log)
+```
+
+YAMCSとMilestone 3の受信スクリプトは同じポートを同時に使えません。そのため受信スクリプトが10015番で受けてログを取り、同じパケットをYAMCS（10016番）へ中継します。M5Stack側の設定は変えなくて構いません。
+
+#### セットアップ
+
+YAMCSはJavaで動きます。初回だけJava 17をインストールしてください。
+
+```sh
+brew install openjdk@17
+```
+
+#### 起動と終了
+
+```sh
+scripts/start.sh    # YAMCS と受信スクリプトをバックグラウンドで起動
+scripts/status.sh   # 動いているかと、YAMCSが受信したパケット数を表示
+scripts/stop.sh     # 両方を終了
+```
+
+初回の起動は、YAMCSの依存ライブラリをダウンロードするため数分かかります。ログは `logs/` に出力されます。
+
+起動したら http://localhost:8090 を開き、インスタンス `gnss` を選びます。Telemetry → Parameters で `/GNSS/Latitude` などの値を見られます。パラメータを開くとグラフも表示されます。
+
+#### YAMCSの構成
+
+| ファイル | 内容 |
+| --- | --- |
+| [yamcs/src/main/yamcs/mdb/gnss.xml](yamcs/src/main/yamcs/mdb/gnss.xml) | Mission Database（XTCE）。パケットのどこに何が入っているかを定義する |
+| [yamcs/src/main/yamcs/etc/yamcs.gnss.yaml](yamcs/src/main/yamcs/etc/yamcs.gnss.yaml) | インスタンス `gnss` の設定。UDPデータリンク（10016番）とパケット前処理 |
+| [yamcs/pom.xml](yamcs/pom.xml) | YAMCSのバージョン（公式 [quickstart](https://github.com/yamcs/quickstart) がベース） |
+
+パラメータは Milestone 3 のパケット形式と1対1で対応しています（`/GNSS/UtcTime`、`/GNSS/Latitude`、`/GNSS/Satellites` など）。次のアラームを定義しています。
+
+| パラメータ | 条件 | レベル |
+| --- | --- | --- |
+| `/GNSS/Satellites` | 4機未満（3D測位できない） | Warning |
+| `/GNSS/FixType` | `NoFix` | Warning |
+
+受信時刻にはYAMCSが受け取った時刻を使います。GNSSから得たUTC時刻は、パラメータ `/GNSS/UtcTime` として見られます。保存したテレメトリは `yamcs/target/yamcs/yamcs-data` に入ります。`mvn clean` で消えます。
 
 ### Future
 

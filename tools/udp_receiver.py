@@ -4,6 +4,7 @@
 使い方:
     python3 tools/udp_receiver.py            # 0.0.0.0:10015 で待ち受け
     python3 tools/udp_receiver.py --port 10015 --raw
+    python3 tools/udp_receiver.py --forward 127.0.0.1:10016   # YAMCSへ中継する
 
 パケット形式は lib/TelemetryPacket/src/TelemetryPacket.h を参照。
 """
@@ -87,16 +88,33 @@ def main():
     parser.add_argument("--host", default="0.0.0.0", help="待ち受けるアドレス (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=10015, help="待ち受けるUDPポート (default: 10015)")
     parser.add_argument("--raw", action="store_true", help="受信したバイト列も16進で表示する")
+    parser.add_argument("--forward", metavar="HOST:PORT", help="受信したパケットをそのまま転送する先 (例: YAMCS)")
     args = parser.parse_args()
+
+    forward_to = None
+    if args.forward:
+        host, _, port = args.forward.rpartition(":")
+        forward_to = (host or "127.0.0.1", int(port))
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((args.host, args.port))
     print(f"Listening on udp://{args.host}:{args.port} (Ctrl+C to stop)")
+    forward_sock = None
+    if forward_to:
+        forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        print(f"Forwarding to udp://{forward_to[0]}:{forward_to[1]}")
 
     last_seq = None
     try:
         while True:
             data, (addr, _) = sock.recvfrom(2048)
+            if forward_sock:
+                # 中身の検査は転送先(YAMCS)に任せ、届いたものはすべて転送する。
+                # 転送先が止まっていても受信は続ける
+                try:
+                    forward_sock.sendto(data, forward_to)
+                except OSError:
+                    pass
             if args.raw:
                 print(f"[{addr}] {data.hex(' ')}")
             try:
