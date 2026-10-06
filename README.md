@@ -193,24 +193,24 @@ scripts/stop.sh     # 両方を終了
 
 初回の起動は、YAMCSの依存ライブラリをダウンロードするため数分かかります。ログは `logs/` に出力されます。
 
-起動したら http://localhost:8090 を開き、インスタンス `gnss` を選びます。Telemetry → Parameters で `/GNSS/Latitude` などの値を見られます。パラメータを開くとグラフも表示されます。
+起動したら http://localhost:8090 を開き、インスタンス `gnss` を選びます。Telemetry → Parameters で `/M5Sat/GNSS/Latitude` などの値を見られます。パラメータを開くとグラフも表示されます。
 
 #### YAMCSの構成
 
 | ファイル | 内容 |
 | --- | --- |
-| [yamcs/src/main/yamcs/mdb/gnss.xml](yamcs/src/main/yamcs/mdb/gnss.xml) | Mission Database（XTCE）。パケットのどこに何が入っているかを定義する |
+| [yamcs/src/main/yamcs/mdb/m5sat.xml](yamcs/src/main/yamcs/mdb/m5sat.xml) | Mission Database（XTCE）。パケットのどこに何が入っているかを定義する。`/M5Sat/Bus`（バス）と `/M5Sat/GNSS`（ペイロード）に分かれる |
 | [yamcs/src/main/yamcs/etc/yamcs.gnss.yaml](yamcs/src/main/yamcs/etc/yamcs.gnss.yaml) | インスタンス `gnss` の設定。UDPデータリンク（10016番）とパケット前処理 |
 | [yamcs/pom.xml](yamcs/pom.xml) | YAMCSのバージョン（公式 [quickstart](https://github.com/yamcs/quickstart) がベース） |
 
-パラメータは Milestone 3 のパケット形式と1対1で対応しています（`/GNSS/UtcTime`、`/GNSS/Latitude`、`/GNSS/Satellites` など）。次のアラームを定義しています。
+パラメータは Milestone 3 のパケット形式と1対1で対応しています（`/M5Sat/GNSS/UtcTime`、`/M5Sat/GNSS/Latitude`、`/M5Sat/GNSS/Satellites` など）。次のアラームを定義しています。
 
 | パラメータ | 条件 | レベル |
 | --- | --- | --- |
-| `/GNSS/Satellites` | 4機未満（3D測位できない） | Warning |
-| `/GNSS/FixType` | `NoFix` | Warning |
+| `/M5Sat/GNSS/Satellites` | 4機未満（3D測位できない） | Warning |
+| `/M5Sat/GNSS/FixType` | `NoFix` | Warning |
 
-受信時刻にはYAMCSが受け取った時刻を使います。GNSSから得たUTC時刻は、パラメータ `/GNSS/UtcTime` として見られます。保存したテレメトリは `yamcs/target/yamcs/yamcs-data` に入ります。`mvn clean` で消えます。
+受信時刻にはYAMCSが受け取った時刻を使います。GNSSから得たUTC時刻は、パラメータ `/M5Sat/GNSS/UtcTime` として見られます。保存したテレメトリは `yamcs/target/yamcs/yamcs-data` に入ります。`mvn clean` で消えます。
 
 ### Milestone 5 - Satellite Operations Simulation
 
@@ -253,19 +253,30 @@ M5Stackを1機の衛星に見立てて、YAMCSを地上局として運用する�
 | 5-9 | Timeline とパス運用 | Timeline, Links, Archive browser |
 | 5-10 | 異常対応の訓練 | Alarms, Events, Command history |
 
-#### 5-1 Housekeeping テレメトリ
+#### 5-1 Housekeeping テレメトリ ✅
 
-衛星の健康状態を表すHK（Housekeeping）テレメトリを、GNSSテレメトリとは別のAPIDで送ります。
+衛星の健康状態を表すHK（Housekeeping）テレメトリを、GNSSテレメトリとは別のAPID（101）で、1秒ごとに送ります。YAMCSでは `/M5Sat/Bus/` の下にパラメータとして並びます。
 
-| 項目 | 内容 |
-| --- | --- |
-| 運用モード | SAFE / NOMINAL / MISSION |
-| ペイロードの電源 | ON / OFF |
-| コマンドカウンタ | 受理したコマンド数・拒否したコマンド数・最後に実行したコマンド |
-| 通信状態 | Wi-FiのRSSI（電波の強さ） |
-| 計算機の状態 | 空きメモリ・起動からの時間・再起動の回数 |
+| Offset | Size | 型 | パラメータ | 内容 |
+| --- | --- | --- | --- | --- |
+| 0 | 6 | - | - | CCSDS Primary Header（TM、APID=101、Sequence countはAPIDごと） |
+| 6 | 1 | uint8 | `Mode` | 運用モード（0=SAFE, 1=NOMINAL, 2=MISSION） |
+| 7 | 1 | uint8 | `PayloadPower` | ペイロードの電源（0=OFF, 1=ON） |
+| 8 | 2 | uint16 | `AcceptedCommands` | 受理したコマンド数 |
+| 10 | 2 | uint16 | `RejectedCommands` | 拒否したコマンド数 |
+| 12 | 1 | uint8 | `LastCommandId` | 最後に実行したコマンドのID（0=なし） |
+| 13 | 1 | int8 | `WifiRssi` | Wi-Fiの電波の強さ（dBm） |
+| 14 | 4 | uint32 | `FreeHeap` | ヒープの空き容量（bytes） |
+| 18 | 4 | uint32 | `MinFreeHeap` | 起動してからのヒープの空き容量の最小値（bytes） |
+| 22 | 4 | uint32 | `Uptime` | 起動からの経過時間（ms） |
+| 26 | 2 | uint16 | `BootCount` | 再起動の回数。電源を切っても消えないよう、M5Stackのフラッシュ（NVS）に保存する |
+| 28 | 1 | uint8 | `ResetReason` | 前回の再起動の理由（ESP-IDF の `esp_reset_reason_t`） |
 
-> 電池残量はGrove Port Aと内部I2Cのピンが共用のため読めません（Milestone 2参照）。
+詳しくは [lib/TelemetryPacket/src/HousekeepingPacket.h](lib/TelemetryPacket/src/HousekeepingPacket.h) を参照してください。
+
+- 運用モードとペイロードの電源は、切り替えを実装する 5-2 / 5-4 までは NOMINAL・ON 固定です。コマンドカウンタも 5-2 までは 0 のままです。
+- リセットボタンによる再起動は、ESP32の仕様で `POWER_ON` として記録されます。
+- 電池残量はGrove Port Aと内部I2Cのピンが共用のため読めません（Milestone 2参照）。
 
 **運用シナリオ**：運用者はTelemetry → Parametersで衛星の健康状態を確認する。M5Stackを再起動すると再起動の回数が増え、Wi-Fiのアクセスポイントから離すとRSSIが下がることを確かめる。
 

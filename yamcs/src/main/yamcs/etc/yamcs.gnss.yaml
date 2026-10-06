@@ -38,7 +38,7 @@ dataLinks:
 mdb:
   - type: xtce
     args:
-      file: mdb/gnss.xml
+      file: mdb/m5sat.xml
 
 streamConfig:
   tm:

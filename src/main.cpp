@@ -1,6 +1,8 @@
 #include <Arduino.h>
+#include <HousekeepingPacket.h>
 #include <M5Unified.h>
 #include <NmeaParser.h>
+#include <Preferences.h>
 #include <TelemetryPacket.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
@@ -32,31 +34,62 @@ TelemetryDisplay display;
 WiFiUDP udp;
 uint32_t lastReportMs = 0;
 uint32_t lastSentenceMs = 0;
-uint16_t packetSequence = 0;
 uint32_t packetsSent = 0;
 
-// テレメトリをCCSDS Space PacketにしてUDPで送る。Wi-Fi未接続なら送らない。
-void sendTelemetry() {
-  if (WiFi.status() != WL_CONNECTED) return;
+// CCSDSのシーケンス番号はAPIDごとに数える
+uint16_t gnssSequence = 0;
+uint16_t housekeepingSequence = 0;
 
-  uint8_t packet[TelemetryPacket::kPacketSize];
-  size_t size = TelemetryPacket::encode(parser.telemetry(), parser.validSentences(),
-                                        parser.checksumErrors(), millis(), packetSequence, packet,
-                                        sizeof(packet));
+// 衛星の健康状態 (HK)
+HousekeepingPacket::Housekeeping housekeeping;
+
+// パケットをUDPで送る。送れたらシーケンス番号を進める。Wi-Fi未接続なら送らない。
+void sendPacket(const uint8_t* packet, size_t size, uint16_t& sequence) {
+  if (WiFi.status() != WL_CONNECTED || size == 0) return;
+
   udp.beginPacket(TELEMETRY_HOST, TELEMETRY_PORT);
   udp.write(packet, size);
   if (udp.endPacket()) {
-    packetSequence = (packetSequence + 1) & 0x3FFF;
+    sequence = (sequence + 1) & 0x3FFF;
     packetsSent++;
   }
+}
+
+void sendGnssTelemetry() {
+  uint8_t packet[TelemetryPacket::kPacketSize];
+  size_t size = TelemetryPacket::encode(parser.telemetry(), parser.validSentences(),
+                                        parser.checksumErrors(), millis(), gnssSequence, packet,
+                                        sizeof(packet));
+  sendPacket(packet, size, gnssSequence);
+}
+
+void sendHousekeeping() {
+  housekeeping.wifiRssi = WiFi.status() == WL_CONNECTED ? static_cast<int8_t>(WiFi.RSSI()) : 0;
+  housekeeping.freeHeap = ESP.getFreeHeap();
+  housekeeping.minFreeHeap = ESP.getMinFreeHeap();
+  housekeeping.uptimeMs = millis();
+
+  uint8_t packet[HousekeepingPacket::kPacketSize];
+  size_t size = HousekeepingPacket::encode(housekeeping, housekeepingSequence, packet, sizeof(packet));
+  sendPacket(packet, size, housekeepingSequence);
+}
+
+// 再起動の回数を数える。電源を切っても消えないようNVS(フラッシュ)に保存する
+uint16_t incrementBootCount() {
+  Preferences prefs;
+  prefs.begin("m5sat", false);
+  uint16_t count = prefs.getUShort("boot_count", 0) + 1;
+  prefs.putUShort("boot_count", count);
+  prefs.end();
+  return count;
 }
 
 // 画面に出すWi-Fi/UDPの状態
 void updateLinkStatus() {
   char text[64];
   if (WiFi.status() == WL_CONNECTED) {
-    snprintf(text, sizeof(text), "UDP %s:%d  tx=%lu", TELEMETRY_HOST, TELEMETRY_PORT,
-             static_cast<unsigned long>(packetsSent));
+    snprintf(text, sizeof(text), "UDP %s:%d  tx=%lu  rssi=%d", TELEMETRY_HOST, TELEMETRY_PORT,
+             static_cast<unsigned long>(packetsSent), housekeeping.wifiRssi);
     display.setLinkStatus(text, true);
   } else {
     snprintf(text, sizeof(text), "WiFi connecting to %s ...", WIFI_SSID);
@@ -115,6 +148,11 @@ void setup() {
 
   display.begin();
 
+  housekeeping.bootCount = incrementBootCount();
+  housekeeping.resetReason = static_cast<uint8_t>(esp_reset_reason());
+  Serial.printf("Boot count: %u, reset reason: %u\n", housekeeping.bootCount,
+                housekeeping.resetReason);
+
   // 接続はバックグラウンドで進み、切断されても自動で再接続する
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
@@ -155,7 +193,8 @@ void loop() {
   if (now - lastReportMs >= TELEMETRY_INTERVAL_MS) {
     lastReportMs = now;
     printTelemetry(parser.telemetry());
-    sendTelemetry();
+    sendGnssTelemetry();
+    sendHousekeeping();
     updateLinkStatus();
     display.draw(parser, receiving);
   } else if (pageChanged) {
