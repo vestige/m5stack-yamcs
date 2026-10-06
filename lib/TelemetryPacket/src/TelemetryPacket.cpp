@@ -1,42 +1,10 @@
 #include "TelemetryPacket.h"
 
-#include <string.h>
+#include "PacketWriter.h"
 
 namespace TelemetryPacket {
 
 namespace {
-
-class Writer {
- public:
-  explicit Writer(uint8_t* buffer) : p_(buffer) {}
-
-  void u8(uint8_t v) { *p_++ = v; }
-  void u16(uint16_t v) {
-    u8(static_cast<uint8_t>(v >> 8));
-    u8(static_cast<uint8_t>(v));
-  }
-  void u32(uint32_t v) {
-    u16(static_cast<uint16_t>(v >> 16));
-    u16(static_cast<uint16_t>(v));
-  }
-  void u64(uint64_t v) {
-    u32(static_cast<uint32_t>(v >> 32));
-    u32(static_cast<uint32_t>(v));
-  }
-  void f32(float v) {
-    uint32_t bits;
-    memcpy(&bits, &v, sizeof(bits));
-    u32(bits);
-  }
-  void f64(double v) {
-    uint64_t bits;
-    memcpy(&bits, &v, sizeof(bits));
-    u64(bits);
-  }
-
- private:
-  uint8_t* p_;
-};
 
 // 1970-01-01からの日数（グレゴリオ暦）
 int32_t daysFromCivil(int32_t y, uint32_t m, uint32_t d) {
@@ -60,15 +28,8 @@ size_t encode(const GnssTelemetry& t, uint32_t validSentences, uint32_t checksum
               uint32_t uptimeMs, uint16_t sequenceCount, uint8_t* buffer, size_t size) {
   if (size < kPacketSize) return 0;
 
-  Writer w(buffer);
-
-  // Primary header
-  // version(3)=0, type(1)=0:TM, secondary header flag(1)=0, APID(11)
-  w.u16(kApid & 0x07FF);
-  // sequence flags(2)=0b11:unsegmented, sequence count(14)
-  w.u16(0xC000 | (sequenceCount & 0x3FFF));
-  // packet data length = データ部のバイト数 - 1
-  w.u16(static_cast<uint16_t>(kPacketSize - kPrimaryHeaderSize - 1));
+  PacketWriter w(buffer);
+  w.primaryHeader(kApid, sequenceCount, kPacketSize);
 
   // UTC時刻は日付と時刻の両方が揃ったときだけ入れる
   bool hasUtc = t.timeValid && t.dateValid;
