@@ -200,7 +200,7 @@ scripts/stop.sh     # 両方を終了
 | ファイル | 内容 |
 | --- | --- |
 | [yamcs/src/main/yamcs/mdb/m5sat.xml](yamcs/src/main/yamcs/mdb/m5sat.xml) | Mission Database（XTCE）。パケットのどこに何が入っているかを定義する。`/M5Sat/Bus`（バス）と `/M5Sat/GNSS`（ペイロード）に分かれる |
-| [yamcs/src/main/yamcs/etc/yamcs.gnss.yaml](yamcs/src/main/yamcs/etc/yamcs.gnss.yaml) | インスタンス `gnss` の設定。UDPデータリンク（10016番）とパケット前処理 |
+| [yamcs/src/main/yamcs/etc/yamcs.gnss.yaml](yamcs/src/main/yamcs/etc/yamcs.gnss.yaml) | インスタンス `gnss` の設定。TMのデータリンク（10016番で受信）、TCのデータリンク（10025番へ送信）、パケットの前処理と後処理 |
 | [yamcs/pom.xml](yamcs/pom.xml) | YAMCSのバージョン（公式 [quickstart](https://github.com/yamcs/quickstart) がベース） |
 
 パラメータは Milestone 3 のパケット形式と1対1で対応しています（`/M5Sat/GNSS/UtcTime`、`/M5Sat/GNSS/Latitude`、`/M5Sat/GNSS/Satellites` など）。次のアラームを定義しています。
@@ -280,22 +280,54 @@ M5Stackを1機の衛星に見立てて、YAMCSを地上局として運用する�
 
 **運用シナリオ**：運用者はTelemetry → Parametersで衛星の健康状態を確認する。M5Stackを再起動すると再起動の回数が増え、Wi-Fiのアクセスポイントから離すとRSSIが下がることを確かめる。
 
-#### 5-2 Telecommand と Command Verification
+#### 5-2 Telecommand と Command Verification ✅
 
-YAMCSからM5StackへCCSDSのTCパケットをUDPで送ります。コマンドはMission Databaseに定義し、Web UIから送信します。
+YAMCSからM5StackへCCSDSのTCパケットをUDPで送ります。コマンドはMission Databaseに定義し、Web UIの Commanding → Send a command から送信します。
 
-| コマンド | 内容 |
-| --- | --- |
-| `NO_OP` | 何もしない。通信路の確認用 |
-| `SET_MODE` | 運用モードを切り替える |
-| `SET_TM_INTERVAL` | テレメトリの送信周期を変える |
-| `PAYLOAD_POWER` | ペイロードの電源をON / OFFする |
-| `RESET_COUNTERS` | コマンドカウンタなどをリセットする |
-| `BEEP` | スピーカーを鳴らす（衛星が反応したことを目で見て確かめる用） |
+```text
+YAMCS ──TC──▶ :10025 tools/udp_receiver.py ──TC──▶ M5Stack :10025
+  ▲                  (地上局の中継)                        │
+  └──── :10016 ◀── :10015 ◀────────── TM (HK / ACK / GNSS) ┘
+```
 
-衛星はコマンドを受けると、受理・実行の結果をテレメトリで返します。YAMCSのCommand Verificationで「受理（Acceptance）→ 実行完了（Complete）」をコマンド履歴に表示させます。不正なコマンド（範囲外の値など）は拒否され、その理由も地上で確認できるようにします。
+受信スクリプトは地上局として、TCの中継も受け持ちます。TCは、直近にTMを送ってきたM5StackのIPアドレスへ送ります。TMが届いていない（衛星が見えていない）間は、TCは送れません。本物の地上局と同じです。
 
-**運用シナリオ**：運用者は `NO_OP` を送って通信路を確認し、Command historyで受理から実行完了までを見届ける。続けて `BEEP` を送ってM5Stackが鳴ることを確かめ、`SET_TM_INTERVAL` でテレメトリの周期を変える。範囲外の周期を送ると拒否され、HKの拒否カウンタが増えることを確認する。
+| ID | コマンド | 引数 | 内容 |
+| --- | --- | --- | --- |
+| 1 | `NO_OP` | なし | 何もしない。通信路の確認用 |
+| 2 | `SET_MODE` | `Mode`（SAFE / NOMINAL / MISSION） | 運用モードを切り替える。SAFEにするとペイロードもOFFになる。ペイロードがOFFのときはMISSIONにできない |
+| 3 | `SET_TM_INTERVAL` | `Interval`（ms） | テレメトリの送信周期を変える。200〜10000ms 以外は拒否する |
+| 4 | `PAYLOAD_POWER` | `State`（ON / OFF） | ペイロードの電源をON / OFFする。OFFの間はGNSSテレメトリを送らない。MISSION中にOFFにするとNOMINALに戻る |
+| 5 | `RESET_COUNTERS` | なし | コマンドカウンタをリセットする |
+| 6 | `BEEP` | `Duration`（ms） | スピーカーを鳴らす。50〜2000ms 以外は拒否する。鳴り終わってから実行完了になる |
+
+範囲のチェックは、今は**衛星側だけ**で行っています。範囲外の値も地上からは送れてしまい、衛星が拒否します。地上側で止める仕組みは 5-5 で入れます。
+
+TCパケット（APID 110）は、CCSDS Primary Header の後ろにコマンドID（1バイト）と引数（ビッグエンディアン）が続きます。長さフィールドとシーケンス番号は、YAMCSの `IssCommandPostprocessor` が埋めます。
+
+##### コマンドの応答（ACK、APID 102）
+
+衛星はTCを受けると、ACKパケットを返します。
+
+| Offset | Size | 型 | パラメータ | 内容 |
+| --- | --- | --- | --- | --- |
+| 0 | 6 | - | - | CCSDS Primary Header（TM、APID=102） |
+| 6 | 2 | uint16 | `AckTcSequence` | どのTCへの応答か（TCのシーケンス番号） |
+| 8 | 1 | uint8 | `AckCommandId` | コマンド |
+| 9 | 1 | uint8 | `AckStage` | 1=ACCEPTED（受理）, 2=REJECTED（拒否）, 3=COMPLETED（実行完了）, 4=FAILED（実行失敗） |
+| 10 | 1 | uint8 | `AckErrorCode` | 0=なし, 1=知らないコマンド, 2=引数の長さが違う, 3=引数が範囲外, 4=今の状態では実行できない, 5=TCパケットとして不正 |
+
+YAMCSのMission Databaseでは、ACKのシーケンス番号と、コマンド履歴に残ったTCのシーケンス番号（`/yamcs/cmdHist/ccsds-seqcount`）を照らし合わせるVerifierを定義しています。
+
+| Verifier | 条件 | 待つ時間 |
+| --- | --- | --- |
+| Accepted | ACKの段階が ACCEPTED | 5秒 |
+| Complete | ACKの段階が COMPLETED | 10秒 |
+| Failed | ACKの段階が REJECTED か FAILED | 10秒 |
+
+Commanding → Command history を開くと、コマンドごとに Accepted → Complete と進む様子、または Failed になった様子を確認できます。拒否の理由は `/M5Sat/Bus/AckErrorCode` で見られます。
+
+**運用シナリオ**：運用者は `NO_OP` を送って通信路を確認し、Command historyで受理から実行完了までを見届ける。続けて `BEEP` を送ってM5Stackが鳴ることを確かめ、`SET_TM_INTERVAL` でテレメトリの周期を変える。範囲外の周期を送ると拒否され、HKの拒否カウンタが増えることを確認する。`PAYLOAD_POWER OFF` でGNSSテレメトリが止まり、そのまま `SET_MODE MISSION` を送ると拒否されることも確かめる。
 
 #### 5-3 衛星からのイベント通知
 

@@ -2,6 +2,7 @@
 # Mac側のプログラム (YAMCS と UDP受信スクリプト) をバックグラウンドで起動する
 #
 #   M5Stack → :10015 udp_receiver.py (ログ記録) → :10016 YAMCS → http://localhost:8090
+#   M5Stack ← :10025 udp_receiver.py (TCの中継) ← :10025 YAMCS
 #
 # ログ: logs/yamcs.log, logs/udp_receiver.log
 set -euo pipefail
@@ -58,14 +59,14 @@ start_udp_receiver() {
 
   local python
   python="$(find_python)"
-  echo "udp_receiver: starting (udp :$RECEIVER_PORT -> :$YAMCS_TM_PORT)"
+  echo "udp_receiver: starting (TM udp :$RECEIVER_PORT -> :$YAMCS_TM_PORT, TC udp :$UPLINK_PORT -> satellite)"
   nohup "$python" -u "$ROOT_DIR/tools/udp_receiver.py" --port "$RECEIVER_PORT" \
-    --forward "127.0.0.1:$YAMCS_TM_PORT" >"$(log_file udp_receiver)" 2>&1 &
+    --forward "127.0.0.1:$YAMCS_TM_PORT" --uplink-port "$UPLINK_PORT" >"$(log_file udp_receiver)" 2>&1 &
   echo $! >"$(pid_file udp_receiver)"
 
   sleep 1
   if ! running_pid udp_receiver >/dev/null; then
-    echo "udp_receiver: 起動に失敗しました。ポート$RECEIVER_PORTを他のプログラムが使っていないか確認してください" >&2
+    echo "udp_receiver: 起動に失敗しました。ポート$RECEIVER_PORT / $UPLINK_PORTを他のプログラムが使っていないか確認してください" >&2
     cat "$(log_file udp_receiver)" >&2
     exit 1
   fi

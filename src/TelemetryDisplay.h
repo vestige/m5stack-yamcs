@@ -2,6 +2,7 @@
 
 #include <M5Unified.h>
 #include <NmeaParser.h>
+#include <Satellite.h>
 
 // M5Stackの画面(320x240)にGNSSテレメトリを表示する
 class TelemetryDisplay {
@@ -9,11 +10,13 @@ class TelemetryDisplay {
   enum class Page { Telemetry, Satellites, Systems };
 
   void begin();
-  void setPage(Page page) { page_ = page; }
-  Page page() const { return page_; }
+  // ボタンA/B/Cでページを切り替える。切り替わったら true
+  bool handleButtons();
 
   // INFO画面に出す通信状態 (ok=falseなら注意色で表示する)
   void setLinkStatus(const char* text, bool ok);
+  // ヘッダに出す衛星の状態
+  void setSatelliteStatus(Satellite::OperationMode mode, bool payloadPower);
 
   // receiving: 直近でNMEAを受信できているか
   void draw(const NmeaParser& parser, bool receiving);
@@ -30,4 +33,6 @@ class TelemetryDisplay {
   Page page_ = Page::Telemetry;
   char linkStatus_[64] = "";
   bool linkOk_ = false;
+  Satellite::OperationMode mode_ = Satellite::OperationMode::Nominal;
+  bool payloadPower_ = true;
 };

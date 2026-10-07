@@ -35,6 +35,16 @@ dataLinks:
       # 先頭4バイト (APID + Sequence count) をシーケンス番号として使う
       seqCountOffset: 0
 
+  # 衛星へのTC。tools/udp_receiver.py (地上局) が受け取り、衛星へ中継する
+  - name: m5stack-tc
+    class: org.yamcs.tctm.UdpTcDataLink
+    stream: tc_realtime
+    host: 127.0.0.1
+    port: 10025
+    # TCパケットの長さフィールドとシーケンス番号を埋める。
+    # 埋めたシーケンス番号はコマンド履歴の ccsds-seqcount に残り、Verifierで衛星のACKと照らし合わせる
+    commandPostprocessorClassName: org.yamcs.tctm.IssCommandPostprocessor
+
 mdb:
   - type: xtce
     args:
