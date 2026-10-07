@@ -7,6 +7,7 @@
 #include "GnssReceiver.h"
 #include "GroundLink.h"
 #include "IntervalTimer.h"
+#include "PayloadLed.h"
 #include "TelemetryDisplay.h"
 
 #if __has_include("secrets.h")
@@ -22,6 +23,8 @@
 // Grove Port A: GPS Unit の TX → GPIO22, RX → GPIO21
 static const int GPS_RX = 22;
 static const int GPS_TX = 21;
+// G25はスピーカー、G16/G17は将来GPSをPort Cへ移すときのために空けておく
+static const int PAYLOAD_LED_PIN = 26;
 
 static const uint32_t DISPLAY_INTERVAL_MS = 1000;
 
@@ -31,6 +34,7 @@ GroundLink groundLink;
 CommandHandler commands(satellite, groundLink);
 BusMonitor bus;
 TelemetryDisplay display;
+PayloadLed payloadLed(PAYLOAD_LED_PIN);
 
 IntervalTimer telemetryTimer;
 IntervalTimer displayTimer;
@@ -60,6 +64,7 @@ void setup() {
   gnss.begin(GPS_RX, GPS_TX);
 
   display.begin();
+  payloadLed.begin(satellite.payloadPower());
   bus.begin();
   groundLink.begin(WIFI_SSID, WIFI_PASSWORD, TELEMETRY_HOST, TELEMETRY_PORT, TELECOMMAND_PORT);
 }
@@ -67,6 +72,7 @@ void setup() {
 void loop() {
   gnss.poll(satellite.payloadPower());
   commands.poll();
+  payloadLed.show(satellite.payloadPower());
 
   M5.update();
   bool pageChanged = display.handleButtons();
