@@ -61,6 +61,11 @@ void TelemetryDisplay::begin() {
   canvas_.createSprite(kWidth, kHeight);
 }
 
+void TelemetryDisplay::setSatelliteStatus(Satellite::OperationMode mode, bool payloadPower) {
+  mode_ = mode;
+  payloadPower_ = payloadPower;
+}
+
 void TelemetryDisplay::setLinkStatus(const char* text, bool ok) {
   snprintf(linkStatus_, sizeof(linkStatus_), "%s", text);
   linkOk_ = ok;
@@ -314,11 +319,24 @@ void TelemetryDisplay::drawHeader(const char* title, const GnssTelemetry& t, boo
   canvas_.setTextDatum(middle_left);
   canvas_.drawString(title, 8, kHeaderHeight / 2);
 
-  // Fix status をバッジで表示する
+  // 運用モード
+  uint16_t modeColor = mode_ == Satellite::OperationMode::Safe      ? TFT_RED
+                       : mode_ == Satellite::OperationMode::Mission ? TFT_CYAN
+                                                                    : TFT_WHITE;
+  canvas_.setFont(&fonts::Font2);
+  canvas_.setTextColor(modeColor);
+  canvas_.drawString(Satellite::modeName(mode_), 76, kHeaderHeight / 2);
+
+  // ペイロードの状態と Fix status をバッジで表示する
   const char* badge;
   uint16_t badgeColor;
   uint16_t badgeTextColor = TFT_BLACK;
-  if (!receiving) {
+  if (!payloadPower_) {
+    badge = "PAYLOAD OFF";
+    badgeColor = TFT_DARKGREY;
+    badgeTextColor = TFT_WHITE;
+    receiving = false;  // 測位品質も表示しない
+  } else if (!receiving) {
     badge = "NO DATA";
     badgeColor = TFT_DARKGREY;
     badgeTextColor = TFT_WHITE;

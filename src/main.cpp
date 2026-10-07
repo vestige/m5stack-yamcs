@@ -1,8 +1,11 @@
+#include <AckPacket.h>
 #include <Arduino.h>
 #include <HousekeepingPacket.h>
 #include <M5Unified.h>
 #include <NmeaParser.h>
 #include <Preferences.h>
+#include <Satellite.h>
+#include <Telecommand.h>
 #include <TelemetryPacket.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
@@ -15,6 +18,11 @@
 #error "include/secrets.h がありません。include/secrets.example.h をコピーしてWi-Fiと送信先を設定してください"
 #endif
 
+// 地上局(Mac)からTCを受けるUDPポート
+#ifndef TELECOMMAND_PORT
+#define TELECOMMAND_PORT 10025
+#endif
+
 // M5Stack Core の Grove Port A
 // GPS Unit: TX → GPIO22 (M5Stack RX)
 //           RX → GPIO21 (M5Stack TX)
@@ -24,24 +32,39 @@ static const int GPS_TX = 21;
 // 1にすると受信したNMEAをそのままシリアルへ流す（Milestone 1の動作）
 #define ECHO_RAW_NMEA 0
 
-static const uint32_t TELEMETRY_INTERVAL_MS = 1000;
+// 画面とシリアル出力の更新周期 (テレメトリの送信周期は SET_TM_INTERVAL で変わる)
+static const uint32_t DISPLAY_INTERVAL_MS = 1000;
 // この時間NMEAを受信できなければ画面に NO DATA を表示する
 static const uint32_t NO_DATA_TIMEOUT_MS = 3000;
+static const uint16_t BEEP_FREQUENCY_HZ = 2000;
 
 HardwareSerial GPS(2);
 NmeaParser parser;
 TelemetryDisplay display;
+Satellite satellite;
 WiFiUDP udp;
-uint32_t lastReportMs = 0;
+WiFiUDP telecommandUdp;
+bool telecommandListening = false;
+uint32_t lastTelemetryMs = 0;
+uint32_t lastDisplayMs = 0;
 uint32_t lastSentenceMs = 0;
 uint32_t packetsSent = 0;
 
 // CCSDSのシーケンス番号はAPIDごとに数える
 uint16_t gnssSequence = 0;
 uint16_t housekeepingSequence = 0;
+uint16_t ackSequence = 0;
 
 // 衛星の健康状態 (HK)
 HousekeepingPacket::Housekeeping housekeeping;
+
+// BEEPのように時間のかかるコマンドは、終わってから COMPLETED を返す
+struct PendingCompletion {
+  bool active = false;
+  uint16_t tcSequence = 0;
+  uint8_t commandId = 0;
+  uint32_t dueMs = 0;
+} pendingCompletion;
 
 // パケットをUDPで送る。送れたらシーケンス番号を進める。Wi-Fi未接続なら送らない。
 void sendPacket(const uint8_t* packet, size_t size, uint16_t& sequence) {
@@ -64,6 +87,7 @@ void sendGnssTelemetry() {
 }
 
 void sendHousekeeping() {
+  satellite.fillHousekeeping(&housekeeping);
   housekeeping.wifiRssi = WiFi.status() == WL_CONNECTED ? static_cast<int8_t>(WiFi.RSSI()) : 0;
   housekeeping.freeHeap = ESP.getFreeHeap();
   housekeeping.minFreeHeap = ESP.getMinFreeHeap();
@@ -72,6 +96,78 @@ void sendHousekeeping() {
   uint8_t packet[HousekeepingPacket::kPacketSize];
   size_t size = HousekeepingPacket::encode(housekeeping, housekeepingSequence, packet, sizeof(packet));
   sendPacket(packet, size, housekeepingSequence);
+}
+
+void sendAck(uint16_t tcSequence, uint8_t commandId, AckPacket::Stage stage,
+             Telecommand::ErrorCode error = Telecommand::ErrorCode::None) {
+  uint8_t packet[AckPacket::kPacketSize];
+  size_t size = AckPacket::encode(tcSequence, commandId, stage, static_cast<uint8_t>(error),
+                                  ackSequence, packet, sizeof(packet));
+  sendPacket(packet, size, ackSequence);
+  Serial.printf("[TC] seq=%u id=%u stage=%u error=%u\n", tcSequence, commandId,
+                static_cast<unsigned>(stage), static_cast<unsigned>(error));
+}
+
+void completePendingCommand() {
+  if (!pendingCompletion.active) return;
+  pendingCompletion.active = false;
+  sendAck(pendingCompletion.tcSequence, pendingCompletion.commandId, AckPacket::Stage::Completed);
+}
+
+// 受け取ったTCを1つ処理する
+void handleTelecommand(const uint8_t* data, size_t size) {
+  Telecommand::Packet tc;
+  bool hasHeader = false;
+  Telecommand::ErrorCode parseError = Telecommand::parse(data, size, &tc, &hasHeader);
+  if (parseError != Telecommand::ErrorCode::None) {
+    satellite.countRejected();
+    // シーケンス番号が読めれば、地上が待っているコマンドを拒否として終わらせられる
+    if (hasHeader) {
+      uint8_t commandId = size > Telecommand::kPrimaryHeaderSize ? data[Telecommand::kPrimaryHeaderSize] : 0;
+      sendAck(tc.sequenceCount, commandId, AckPacket::Stage::Rejected, parseError);
+    }
+    return;
+  }
+
+  Satellite::Result result = satellite.handle(tc);
+  if (!result.accepted) {
+    sendAck(tc.sequenceCount, tc.commandId, AckPacket::Stage::Rejected, result.error);
+    return;
+  }
+
+  sendAck(tc.sequenceCount, tc.commandId, AckPacket::Stage::Accepted);
+  if (result.beepMs > 0) {
+    // 前のBEEPが鳴っている途中なら、先にそれを完了させる
+    completePendingCommand();
+    M5.Speaker.tone(BEEP_FREQUENCY_HZ, result.beepMs);
+    pendingCompletion.active = true;
+    pendingCompletion.tcSequence = tc.sequenceCount;
+    pendingCompletion.commandId = tc.commandId;
+    pendingCompletion.dueMs = millis() + result.beepMs;
+  } else {
+    sendAck(tc.sequenceCount, tc.commandId, AckPacket::Stage::Completed);
+  }
+}
+
+void receiveTelecommands() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (!telecommandListening) {
+    telecommandListening = telecommandUdp.begin(TELECOMMAND_PORT);
+    Serial.printf("Listening for telecommands on udp :%d\n", TELECOMMAND_PORT);
+  }
+
+  int size;
+  while ((size = telecommandUdp.parsePacket()) > 0) {
+    uint8_t buffer[64];
+    int n = telecommandUdp.read(buffer, sizeof(buffer));
+    if (n <= 0) continue;
+    // バッファに収まらない長さのTCは、長さフィールドの検査で拒否される
+    handleTelecommand(buffer, size > n ? static_cast<size_t>(size) : static_cast<size_t>(n));
+  }
+
+  if (pendingCompletion.active && static_cast<int32_t>(millis() - pendingCompletion.dueMs) >= 0) {
+    completePendingCommand();
+  }
 }
 
 // 再起動の回数を数える。電源を切っても消えないようNVS(フラッシュ)に保存する
@@ -84,8 +180,8 @@ uint16_t incrementBootCount() {
   return count;
 }
 
-// 画面に出すWi-Fi/UDPの状態
-void updateLinkStatus() {
+// 画面に出すWi-Fi/UDPと衛星の状態
+void updateDisplayStatus() {
   char text[64];
   if (WiFi.status() == WL_CONNECTED) {
     snprintf(text, sizeof(text), "UDP %s:%d  tx=%lu  rssi=%d", TELEMETRY_HOST, TELEMETRY_PORT,
@@ -95,6 +191,7 @@ void updateLinkStatus() {
     snprintf(text, sizeof(text), "WiFi connecting to %s ...", WIFI_SSID);
     display.setLinkStatus(text, false);
   }
+  display.setSatelliteStatus(satellite.mode(), satellite.payloadPower());
 }
 
 void printTelemetry(const GnssTelemetry& t) {
@@ -132,11 +229,12 @@ void setup() {
   auto cfg = M5.config();
   cfg.serial_baudrate = 115200;
   M5.begin(cfg);
+  M5.Speaker.setVolume(64);
   delay(1000);
 
   Serial.println();
   Serial.println("====================");
-  Serial.println("M5Stack GNSS telemetry");
+  Serial.println("M5Sat (M5Stack GNSS telemetry)");
   Serial.println("====================");
 
   // Core(Basic)のGrove Port A(GPIO21/22)は内部I2Cと共用のため、
@@ -169,8 +267,11 @@ void loop() {
 #if ECHO_RAW_NMEA
     Serial.write(c);
 #endif
-    if (parser.encode(c)) lastSentenceMs = millis();
+    // ペイロード(GNSS受信機)の電源がOFFの間は、届いたデータを読み捨てる
+    if (satellite.payloadPower() && parser.encode(c)) lastSentenceMs = millis();
   }
+
+  receiveTelecommands();
 
   // ボタンA: テレメトリ画面 / ボタンB: 衛星画面 / ボタンC: 衛星システム一覧
   M5.update();
@@ -189,13 +290,17 @@ void loop() {
   }
 
   uint32_t now = millis();
-  bool receiving = lastSentenceMs != 0 && now - lastSentenceMs < NO_DATA_TIMEOUT_MS;
-  if (now - lastReportMs >= TELEMETRY_INTERVAL_MS) {
-    lastReportMs = now;
-    printTelemetry(parser.telemetry());
-    sendGnssTelemetry();
+  if (now - lastTelemetryMs >= satellite.tmIntervalMs()) {
+    lastTelemetryMs = now;
+    if (satellite.payloadPower()) sendGnssTelemetry();
     sendHousekeeping();
-    updateLinkStatus();
+  }
+
+  bool receiving = lastSentenceMs != 0 && now - lastSentenceMs < NO_DATA_TIMEOUT_MS;
+  if (now - lastDisplayMs >= DISPLAY_INTERVAL_MS) {
+    lastDisplayMs = now;
+    printTelemetry(parser.telemetry());
+    updateDisplayStatus();
     display.draw(parser, receiving);
   } else if (pageChanged) {
     // ページ切り替えは次の更新を待たずにすぐ描画する

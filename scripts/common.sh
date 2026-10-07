@@ -9,6 +9,8 @@ LOG_DIR="$ROOT_DIR/logs"
 RECEIVER_PORT=10015
 # YAMCSのUDPデータリンクのポート (yamcs/src/main/yamcs/etc/yamcs.gnss.yaml)
 YAMCS_TM_PORT=10016
+# YAMCSがTCを送るポート。受信スクリプトが受け取って衛星へ中継する (yamcs.gnss.yaml)
+UPLINK_PORT=10025
 YAMCS_URL="http://localhost:8090"
 
 # 管理するプロセス (起動順)

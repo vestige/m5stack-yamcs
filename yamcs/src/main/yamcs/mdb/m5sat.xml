@@ -4,6 +4,8 @@
 
   /M5Sat          CCSDS Primary Header (全パケット共通)
   /M5Sat/Bus      バス: HK (Housekeeping) テレメトリ    APID 101  lib/TelemetryPacket/src/HousekeepingPacket.h
+                       コマンドへの応答 (ACK)          APID 102  lib/TelemetryPacket/src/AckPacket.h
+                       コマンド (TC)                   APID 110  lib/Satellite/src/Telecommand.h
   /M5Sat/GNSS     ペイロード: GNSS受信機のテレメトリ    APID 100  lib/TelemetryPacket/src/TelemetryPacket.h
 -->
 <SpaceSystem name="M5Sat" xmlns="http://www.omg.org/spec/XTCE/20180204" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.omg.org/spec/XTCE/20180204 https://www.omg.org/spec/XTCE/20180204/SpaceSystem.xsd">
@@ -84,9 +86,41 @@
 				<IntegerParameterType name="Command_Count_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="16" />
 				</IntegerParameterType>
-				<IntegerParameterType name="Command_Id_Type" signed="false">
+				<EnumeratedParameterType name="Command_Id_Type">
 					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="NONE" />
+						<Enumeration value="1" label="NO_OP" />
+						<Enumeration value="2" label="SET_MODE" />
+						<Enumeration value="3" label="SET_TM_INTERVAL" />
+						<Enumeration value="4" label="PAYLOAD_POWER" />
+						<Enumeration value="5" label="RESET_COUNTERS" />
+						<Enumeration value="6" label="BEEP" />
+					</EnumerationList>
+				</EnumeratedParameterType>
+				<IntegerParameterType name="Tc_Sequence_Type" signed="false">
+					<IntegerDataEncoding sizeInBits="16" />
 				</IntegerParameterType>
+				<EnumeratedParameterType name="Ack_Stage_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="1" label="ACCEPTED" />
+						<Enumeration value="2" label="REJECTED" />
+						<Enumeration value="3" label="COMPLETED" />
+						<Enumeration value="4" label="FAILED" />
+					</EnumerationList>
+				</EnumeratedParameterType>
+				<EnumeratedParameterType name="Error_Code_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="NONE" />
+						<Enumeration value="1" label="UNKNOWN_COMMAND" />
+						<Enumeration value="2" label="INVALID_LENGTH" />
+						<Enumeration value="3" label="INVALID_ARGUMENT" />
+						<Enumeration value="4" label="NOT_ALLOWED" />
+						<Enumeration value="5" label="MALFORMED_PACKET" />
+					</EnumerationList>
+				</EnumeratedParameterType>
 				<IntegerParameterType name="Rssi_Type" signed="true">
 					<UnitSet>
 						<Unit>dBm</Unit>
@@ -132,13 +166,17 @@
 				<Parameter name="PayloadPower" parameterTypeRef="Power_Type" shortDescription="ペイロード(GNSS受信機)の電源" />
 				<Parameter name="AcceptedCommands" parameterTypeRef="Command_Count_Type" shortDescription="受理したコマンド数" />
 				<Parameter name="RejectedCommands" parameterTypeRef="Command_Count_Type" shortDescription="拒否したコマンド数" />
-				<Parameter name="LastCommandId" parameterTypeRef="Command_Id_Type" shortDescription="最後に実行したコマンドのID (0=なし)" />
+				<Parameter name="LastCommandId" parameterTypeRef="Command_Id_Type" shortDescription="最後に受理したコマンド" />
 				<Parameter name="WifiRssi" parameterTypeRef="Rssi_Type" shortDescription="Wi-Fiの電波の強さ" />
 				<Parameter name="FreeHeap" parameterTypeRef="Bytes_Type" shortDescription="ヒープの空き容量" />
 				<Parameter name="MinFreeHeap" parameterTypeRef="Bytes_Type" shortDescription="起動してからのヒープの空き容量の最小値" />
 				<Parameter name="Uptime" parameterTypeRef="Uptime_Type" shortDescription="起動からの経過時間" />
 				<Parameter name="BootCount" parameterTypeRef="Boot_Count_Type" shortDescription="再起動の回数 (電源を切っても保持)" />
 				<Parameter name="ResetReason" parameterTypeRef="Reset_Reason_Type" shortDescription="前回の再起動の理由" />
+				<Parameter name="AckTcSequence" parameterTypeRef="Tc_Sequence_Type" shortDescription="ACK: どのTC (シーケンス番号) への応答か" />
+				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
+				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
+				<Parameter name="AckErrorCode" parameterTypeRef="Error_Code_Type" shortDescription="ACK: 拒否・失敗の理由" />
 			</ParameterSet>
 
 			<ContainerSet>
@@ -166,8 +204,226 @@
 						</RestrictionCriteria>
 					</BaseContainer>
 				</SequenceContainer>
+
+				<!-- APID 102: コマンドへの応答 (ACK) -->
+				<SequenceContainer name="CommandAck">
+					<EntryList>
+						<ParameterRefEntry parameterRef="AckTcSequence" />
+						<ParameterRefEntry parameterRef="AckCommandId" />
+						<ParameterRefEntry parameterRef="AckStage" />
+						<ParameterRefEntry parameterRef="AckErrorCode" />
+					</EntryList>
+					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
+						<RestrictionCriteria>
+							<ComparisonList>
+								<Comparison parameterRef="/M5Sat/CCSDS_Type" value="TM" />
+								<Comparison parameterRef="/M5Sat/CCSDS_APID" value="102" />
+							</ComparisonList>
+						</RestrictionCriteria>
+					</BaseContainer>
+				</SequenceContainer>
 			</ContainerSet>
 		</TelemetryMetaData>
+
+		<CommandMetaData>
+			<ArgumentTypeSet>
+				<IntegerArgumentType name="Command_Id_Arg_Type" signed="false">
+					<IntegerDataEncoding sizeInBits="8" />
+				</IntegerArgumentType>
+				<EnumeratedArgumentType name="Mode_Arg_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="SAFE" />
+						<Enumeration value="1" label="NOMINAL" />
+						<Enumeration value="2" label="MISSION" />
+					</EnumerationList>
+				</EnumeratedArgumentType>
+				<EnumeratedArgumentType name="Power_Arg_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="OFF" />
+						<Enumeration value="1" label="ON" />
+					</EnumerationList>
+				</EnumeratedArgumentType>
+				<!-- 範囲のチェックは衛星側だけで行う (地上側のチェックは 5-5 で入れる) -->
+				<IntegerArgumentType name="Milliseconds_Arg_Type" signed="false">
+					<UnitSet>
+						<Unit>ms</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="16" />
+				</IntegerArgumentType>
+			</ArgumentTypeSet>
+
+			<MetaCommandSet>
+				<!--
+				  全コマンド共通の TC パケット (APID 110)
+				  長さフィールドとシーケンス番号は IssCommandPostprocessor が埋める
+				-->
+				<MetaCommand name="M5SatCommand" abstract="true">
+					<ArgumentList>
+						<Argument name="CommandId" argumentTypeRef="Command_Id_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="M5SatCommand">
+						<EntryList>
+							<!-- version=0, type=TC, secondary header=0, APID=110 -->
+							<FixedValueEntry name="CCSDS_Packet_Id" binaryValue="106E" sizeInBits="16" />
+							<!-- sequence flags=unsegmented, sequence count=0 (後で埋める) -->
+							<FixedValueEntry name="CCSDS_Packet_Sequence" binaryValue="C000" sizeInBits="16" />
+							<FixedValueEntry name="CCSDS_Packet_Length" binaryValue="0000" sizeInBits="16" />
+							<ArgumentRefEntry argumentRef="CommandId" />
+						</EntryList>
+					</CommandContainer>
+					<!-- 衛星から届くACKのシーケンス番号を照らし合わせて、コマンドの段階を進める -->
+					<VerifierSet>
+					<AcceptedVerifier name="Accepted">
+						<BooleanExpression>
+							<ANDedConditions>
+								<Condition>
+									<ParameterInstanceRef parameterRef="/yamcs/cmdHist/ccsds-seqcount" />
+									<ComparisonOperator>==</ComparisonOperator>
+									<ParameterInstanceRef parameterRef="AckTcSequence" />
+								</Condition>
+								<Condition>
+									<ParameterInstanceRef parameterRef="AckStage" />
+									<ComparisonOperator>==</ComparisonOperator>
+									<Value>ACCEPTED</Value>
+								</Condition>
+							</ANDedConditions>
+						</BooleanExpression>
+						<CheckWindow timeToStopChecking="PT5S" timeWindowIsRelativeTo="commandRelease" />
+					</AcceptedVerifier>
+					<CompleteVerifier name="Complete">
+						<BooleanExpression>
+							<ANDedConditions>
+								<Condition>
+									<ParameterInstanceRef parameterRef="/yamcs/cmdHist/ccsds-seqcount" />
+									<ComparisonOperator>==</ComparisonOperator>
+									<ParameterInstanceRef parameterRef="AckTcSequence" />
+								</Condition>
+								<Condition>
+									<ParameterInstanceRef parameterRef="AckStage" />
+									<ComparisonOperator>==</ComparisonOperator>
+									<Value>COMPLETED</Value>
+								</Condition>
+							</ANDedConditions>
+						</BooleanExpression>
+						<CheckWindow timeToStopChecking="PT10S" timeWindowIsRelativeTo="commandRelease" />
+					</CompleteVerifier>
+					<FailedVerifier>
+						<BooleanExpression>
+							<ANDedConditions>
+								<Condition>
+									<ParameterInstanceRef parameterRef="/yamcs/cmdHist/ccsds-seqcount" />
+									<ComparisonOperator>==</ComparisonOperator>
+									<ParameterInstanceRef parameterRef="AckTcSequence" />
+								</Condition>
+								<ORedConditions>
+									<Condition>
+										<ParameterInstanceRef parameterRef="AckStage" />
+										<ComparisonOperator>==</ComparisonOperator>
+										<Value>REJECTED</Value>
+									</Condition>
+									<Condition>
+										<ParameterInstanceRef parameterRef="AckStage" />
+										<ComparisonOperator>==</ComparisonOperator>
+										<Value>FAILED</Value>
+									</Condition>
+								</ORedConditions>
+							</ANDedConditions>
+						</BooleanExpression>
+						<CheckWindow timeToStopChecking="PT10S" timeWindowIsRelativeTo="commandRelease" />
+					</FailedVerifier>
+					</VerifierSet>
+				</MetaCommand>
+
+				<MetaCommand name="NO_OP" shortDescription="何もしない。通信路の確認用">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="1" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<CommandContainer name="NO_OP">
+						<EntryList />
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+				<MetaCommand name="SET_MODE" shortDescription="運用モードを切り替える。SAFEにするとペイロードもOFFになる">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="2" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="Mode" argumentTypeRef="Mode_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="SET_MODE">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="Mode" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+				<MetaCommand name="SET_TM_INTERVAL" shortDescription="テレメトリの送信周期を変える (200〜10000ms)">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="3" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="Interval" argumentTypeRef="Milliseconds_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="SET_TM_INTERVAL">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="Interval" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+				<MetaCommand name="PAYLOAD_POWER" shortDescription="ペイロード(GNSS受信機)の電源をON/OFFする">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="4" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="State" argumentTypeRef="Power_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="PAYLOAD_POWER">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="State" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+				<MetaCommand name="RESET_COUNTERS" shortDescription="コマンドカウンタをリセットする">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="5" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<CommandContainer name="RESET_COUNTERS">
+						<EntryList />
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+				<MetaCommand name="BEEP" shortDescription="スピーカーを鳴らす (50〜2000ms)">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="6" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="Duration" argumentTypeRef="Milliseconds_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="BEEP">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="Duration" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+			</MetaCommandSet>
+		</CommandMetaData>
 	</SpaceSystem>
 
 	<!-- ペイロード: GNSS受信機 -->
