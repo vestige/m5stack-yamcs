@@ -10,8 +10,8 @@ class TelemetryDisplay {
   enum class Page { Telemetry, Satellites, Systems };
 
   void begin();
-  void setPage(Page page) { page_ = page; }
-  Page page() const { return page_; }
+  // ボタンA/B/Cでページを切り替える。切り替わったら true
+  bool handleButtons();
 
   // INFO画面に出す通信状態 (ok=falseなら注意色で表示する)
   void setLinkStatus(const char* text, bool ok);

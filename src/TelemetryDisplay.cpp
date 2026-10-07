@@ -61,6 +61,16 @@ void TelemetryDisplay::begin() {
   canvas_.createSprite(kWidth, kHeight);
 }
 
+bool TelemetryDisplay::handleButtons() {
+  Page next = page_;
+  if (M5.BtnA.wasPressed()) next = Page::Telemetry;
+  if (M5.BtnB.wasPressed()) next = Page::Satellites;
+  if (M5.BtnC.wasPressed()) next = Page::Systems;
+  if (next == page_) return false;
+  page_ = next;
+  return true;
+}
+
 void TelemetryDisplay::setSatelliteStatus(Satellite::OperationMode mode, bool payloadPower) {
   mode_ = mode;
   payloadPower_ = payloadPower;
