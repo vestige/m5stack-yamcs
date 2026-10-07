@@ -344,11 +344,41 @@ M5Stack G26 ──[抵抗 220〜330Ω]──▶|── GND
 
 `SET_MODE SAFE` でペイロードの電源が切れたときも、LEDは消えます。
 
-#### 5-3 衛星からのイベント通知
+#### 5-3 衛星からのイベント通知 ✅
 
-衛星が「モードが変わった」「コマンドを拒否した」などの出来事を、イベント用のパケットで地上に知らせます。YAMCSではEventsに文章で並ぶので、何が起きたかを時系列で追えます。
+衛星が「モードが変わった」「コマンドを拒否した」などの出来事を、イベント用のパケット（APID 103）で地上に知らせます。YAMCSでは **Events** に文章で並ぶので、何が起きたかを時系列で追えます。
 
-**運用シナリオ**：運用者はEventsを開いたまま、5-2のコマンドを順に送る。コマンドごとに衛星からイベントが届き、拒否されたコマンドは理由つきでWarningとして表示されることを確かめる。
+本物の衛星と同じく、衛星は**イベントの番号と数値だけ**を送り、文章は地上で組み立てます。衛星側のメモリと通信量を節約でき、文章を直したいときも地上側（Mission Database）だけで済みます。
+
+```text
+衛星:  EVENT(WARNING, COMMAND_REJECTED, arg1=3, arg2=3)
+  ↓
+YAMCS: WARNING  M5Sat  COMMAND_REJECTED  コマンド SET_TM_INTERVAL を拒否しました: 引数が範囲外です
+```
+
+| ID | イベント | 重要度 | 引数1 / 引数2 | Events に出る文章 |
+| --- | --- | --- | --- | --- |
+| 1 | `BOOT` | INFO | 再起動の回数 / 再起動の理由 | 起動しました (14回目, 理由: POWER_ON) |
+| 2 | `MODE_CHANGED` | INFO | 変更前 / 変更後のモード | 運用モードを NOMINAL から SAFE に変更しました |
+| 3 | `PAYLOAD_POWER_CHANGED` | INFO | 0=OFF, 1=ON | ペイロードの電源を OFF にしました |
+| 4 | `TM_INTERVAL_CHANGED` | INFO | 周期（ms） | テレメトリの送信周期を 2000ms に変更しました |
+| 5 | `COUNTERS_RESET` | INFO | - | コマンドカウンタをリセットしました |
+| 6 | `COMMAND_REJECTED` | WARNING | コマンドID / エラーコード | コマンド SET_TM_INTERVAL を拒否しました: 引数が範囲外です |
+
+- 状態が実際に変わったときだけ出します。たとえば、NOMINALのときに `SET_MODE NOMINAL` を送ってもイベントは出ません。
+- Wi-Fiにつながる前に起きたイベント（起動時の `BOOT` など）は、衛星側に溜めておき、つながってから送ります（最大16個。あふれたら古いものから捨てます）。
+
+| Offset | Size | 型 | パラメータ | 内容 |
+| --- | --- | --- | --- | --- |
+| 0 | 6 | - | - | CCSDS Primary Header（TM、APID=103） |
+| 6 | 1 | uint8 | `EventSeverity` | 0=INFO, 1=WATCH, 2=WARNING, 3=DISTRESS, 4=CRITICAL, 5=SEVERE |
+| 7 | 1 | uint8 | `EventId` | 上の表のID |
+| 8 | 2 | uint16 | `EventArg1` | 引数1 |
+| 10 | 2 | uint16 | `EventArg2` | 引数2 |
+
+文章を組み立てているのは、Mission Database の `/M5Sat/Bus/SatelliteEventMessage` というアルゴリズム（JavaScript）です。イベントパケットが届くたびに動き、YAMCSの `EventLog` でイベントを出します。過去データの再生で同じイベントが重複しないよう、リアルタイムのプロセッサのときだけ出します。
+
+**運用シナリオ**：運用者はEventsを開いたまま、5-2のコマンドを順に送る。M5Stackを再起動すると `BOOT` が届き、`SET_MODE SAFE` ではモードの変更とペイロードの電源OFFの2つのイベントが届く。範囲外の `SET_TM_INTERVAL` を送ると、拒否の理由つきのイベントがWarningとして表示されることを確かめる。
 
 #### 5-4 運用モードと異常時の自動退避（FDIR）
 

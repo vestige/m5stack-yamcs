@@ -1,8 +1,10 @@
 #pragma once
 
+#include <EventPacket.h>
 #include <HousekeepingPacket.h>
 #include <stdint.h>
 
+#include "EventQueue.h"
 #include "Telecommand.h"
 
 // 衛星M5Satのバスの状態 (運用モード・ペイロード電源・コマンドカウンタなど) と、
@@ -28,7 +30,11 @@ class Satellite {
   // コマンドを検査し、受理できれば実行する。受理数・拒否数もここで数える。
   Result handle(const Telecommand::Packet& tc);
   // TCパケットとして解析できなかったものを拒否として数える
-  void countRejected() { rejectedCommands_++; }
+  void reject(uint8_t commandId, Telecommand::ErrorCode error);
+
+  // 地上へ知らせるイベントを溜める / 取り出す
+  void report(const EventPacket::Event& event) { events_.push(event); }
+  bool popEvent(EventPacket::Event* event) { return events_.pop(event); }
 
   OperationMode mode() const { return mode_; }
   bool payloadPower() const { return payloadPower_; }
@@ -45,6 +51,9 @@ class Satellite {
  private:
   Telecommand::ErrorCode validate(const Telecommand::Packet& tc) const;
   void execute(const Telecommand::Packet& tc, Result* result);
+  void changeMode(OperationMode mode);
+  void changePayloadPower(bool on);
+  void reportInfo(EventPacket::EventId id, uint16_t arg1 = 0, uint16_t arg2 = 0);
 
   OperationMode mode_ = OperationMode::Nominal;
   bool payloadPower_ = true;
@@ -52,4 +61,5 @@ class Satellite {
   uint16_t acceptedCommands_ = 0;
   uint16_t rejectedCommands_ = 0;
   uint8_t lastCommandId_ = 0;
+  EventQueue events_;
 };

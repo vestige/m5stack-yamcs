@@ -44,6 +44,20 @@ void sendTelemetry() {
   groundLink.sendHousekeeping(bus.collect(satellite, groundLink));
 }
 
+// Wi-Fiにつながるまでのイベントは衛星に溜めておく
+void sendEvents() {
+  EventPacket::Event event;
+  while (groundLink.connected() && satellite.popEvent(&event)) groundLink.sendEvent(event);
+}
+
+void reportBoot() {
+  EventPacket::Event event;
+  event.id = EventPacket::EventId::Boot;
+  event.arg1 = bus.bootCount();
+  event.arg2 = bus.resetReason();
+  satellite.report(event);
+}
+
 void refreshDisplay(uint32_t now) {
   char linkStatus[64];
   groundLink.describe(linkStatus, sizeof(linkStatus));
@@ -66,12 +80,14 @@ void setup() {
   display.begin();
   payloadLed.begin(satellite.payloadPower());
   bus.begin();
+  reportBoot();
   groundLink.begin(WIFI_SSID, WIFI_PASSWORD, TELEMETRY_HOST, TELEMETRY_PORT, TELECOMMAND_PORT);
 }
 
 void loop() {
   gnss.poll(satellite.payloadPower());
   commands.poll();
+  sendEvents();
   payloadLed.show(satellite.payloadPower());
 
   M5.update();

@@ -5,6 +5,7 @@
   /M5Sat          CCSDS Primary Header (全パケット共通)
   /M5Sat/Bus      バス: HK (Housekeeping) テレメトリ    APID 101  lib/TelemetryPacket/src/HousekeepingPacket.h
                        コマンドへの応答 (ACK)          APID 102  lib/TelemetryPacket/src/AckPacket.h
+                       イベント                        APID 103  lib/TelemetryPacket/src/EventPacket.h
                        コマンド (TC)                   APID 110  lib/Satellite/src/Telecommand.h
   /M5Sat/GNSS     ペイロード: GNSS受信機のテレメトリ    APID 100  lib/TelemetryPacket/src/TelemetryPacket.h
 -->
@@ -110,6 +111,31 @@
 						<Enumeration value="4" label="FAILED" />
 					</EnumerationList>
 				</EnumeratedParameterType>
+				<EnumeratedParameterType name="Event_Severity_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="INFO" />
+						<Enumeration value="1" label="WATCH" />
+						<Enumeration value="2" label="WARNING" />
+						<Enumeration value="3" label="DISTRESS" />
+						<Enumeration value="4" label="CRITICAL" />
+						<Enumeration value="5" label="SEVERE" />
+					</EnumerationList>
+				</EnumeratedParameterType>
+				<EnumeratedParameterType name="Event_Id_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="1" label="BOOT" />
+						<Enumeration value="2" label="MODE_CHANGED" />
+						<Enumeration value="3" label="PAYLOAD_POWER_CHANGED" />
+						<Enumeration value="4" label="TM_INTERVAL_CHANGED" />
+						<Enumeration value="5" label="COUNTERS_RESET" />
+						<Enumeration value="6" label="COMMAND_REJECTED" />
+					</EnumerationList>
+				</EnumeratedParameterType>
+				<IntegerParameterType name="Event_Arg_Type" signed="false">
+					<IntegerDataEncoding sizeInBits="16" />
+				</IntegerParameterType>
 				<EnumeratedParameterType name="Error_Code_Type">
 					<IntegerDataEncoding sizeInBits="8" />
 					<EnumerationList>
@@ -177,6 +203,10 @@
 				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
 				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
 				<Parameter name="AckErrorCode" parameterTypeRef="Error_Code_Type" shortDescription="ACK: 拒否・失敗の理由" />
+				<Parameter name="EventSeverity" parameterTypeRef="Event_Severity_Type" shortDescription="イベント: 重要度" />
+				<Parameter name="EventId" parameterTypeRef="Event_Id_Type" shortDescription="イベント: 種類" />
+				<Parameter name="EventArg1" parameterTypeRef="Event_Arg_Type" shortDescription="イベント: 引数1 (イベントごとに意味が違う)" />
+				<Parameter name="EventArg2" parameterTypeRef="Event_Arg_Type" shortDescription="イベント: 引数2 (イベントごとに意味が違う)" />
 			</ParameterSet>
 
 			<ContainerSet>
@@ -222,7 +252,92 @@
 						</RestrictionCriteria>
 					</BaseContainer>
 				</SequenceContainer>
+
+				<!-- APID 103: 衛星で起きた出来事 (イベント) -->
+				<SequenceContainer name="SatelliteEvent">
+					<EntryList>
+						<ParameterRefEntry parameterRef="EventSeverity" />
+						<ParameterRefEntry parameterRef="EventId" />
+						<ParameterRefEntry parameterRef="EventArg1" />
+						<ParameterRefEntry parameterRef="EventArg2" />
+					</EntryList>
+					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
+						<RestrictionCriteria>
+							<ComparisonList>
+								<Comparison parameterRef="/M5Sat/CCSDS_Type" value="TM" />
+								<Comparison parameterRef="/M5Sat/CCSDS_APID" value="103" />
+							</ComparisonList>
+						</RestrictionCriteria>
+					</BaseContainer>
+				</SequenceContainer>
 			</ContainerSet>
+
+			<AlgorithmSet>
+				<!--
+				  衛星はイベントの番号と数値だけを送ってくるので、ここで文章にして YAMCS の Events に出す。
+				  過去データの再生で同じイベントが重複しないよう、リアルタイムのプロセッサのときだけ出す。
+				-->
+				<CustomAlgorithm name="SatelliteEventMessage">
+					<AlgorithmText language="JavaScript"><![CDATA[
+if (Yamcs.processorName() != "realtime") return;
+
+var MODE = ["SAFE", "NOMINAL", "MISSION"];
+var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP"];
+var ERROR = ["", "知らないコマンドです", "引数の長さが違います", "引数が範囲外です",
+             "今の状態では実行できません", "TCパケットとして不正です"];
+var RESET_REASON = ["UNKNOWN", "POWER_ON", "EXTERNAL", "SOFTWARE", "PANIC", "INTERRUPT_WATCHDOG",
+                    "TASK_WATCHDOG", "OTHER_WATCHDOG", "DEEP_SLEEP", "BROWNOUT", "SDIO"];
+
+function name(list, i) { return list[i] !== undefined ? list[i] : String(i); }
+
+var a1 = arg1.rawValue;
+var a2 = arg2.rawValue;
+var message;
+switch (eventId.value) {
+  case "BOOT":
+    message = "起動しました (" + a1 + "回目, 理由: " + name(RESET_REASON, a2) + ")";
+    break;
+  case "MODE_CHANGED":
+    message = "運用モードを " + name(MODE, a1) + " から " + name(MODE, a2) + " に変更しました";
+    break;
+  case "PAYLOAD_POWER_CHANGED":
+    message = "ペイロードの電源を " + (a1 == 1 ? "ON" : "OFF") + " にしました";
+    break;
+  case "TM_INTERVAL_CHANGED":
+    message = "テレメトリの送信周期を " + a1 + "ms に変更しました";
+    break;
+  case "COUNTERS_RESET":
+    message = "コマンドカウンタをリセットしました";
+    break;
+  case "COMMAND_REJECTED":
+    message = "コマンド " + name(COMMAND, a1) + " を拒否しました: " + name(ERROR, a2);
+    break;
+  default:
+    message = "不明なイベント (" + eventId.rawValue + ", " + a1 + ", " + a2 + ")";
+}
+
+var source = "M5Sat";
+var type = String(eventId.value);
+switch (severity.value) {
+  case "WATCH": EventLog.watch(source, type, message); break;
+  case "WARNING": EventLog.warning(source, type, message); break;
+  case "DISTRESS": EventLog.distress(source, type, message); break;
+  case "CRITICAL": EventLog.critical(source, type, message); break;
+  case "SEVERE": EventLog.severe(source, type, message); break;
+  default: EventLog.info(source, type, message);
+}
+]]></AlgorithmText>
+					<InputSet>
+						<InputParameterInstanceRef parameterRef="EventSeverity" inputName="severity" />
+						<InputParameterInstanceRef parameterRef="EventId" inputName="eventId" />
+						<InputParameterInstanceRef parameterRef="EventArg1" inputName="arg1" />
+						<InputParameterInstanceRef parameterRef="EventArg2" inputName="arg2" />
+					</InputSet>
+					<TriggerSet>
+						<OnParameterUpdateTrigger parameterRef="EventId" />
+					</TriggerSet>
+				</CustomAlgorithm>
+			</AlgorithmSet>
 		</TelemetryMetaData>
 
 		<CommandMetaData>

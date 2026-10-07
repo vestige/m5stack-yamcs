@@ -51,6 +51,12 @@ void GroundLink::sendAck(uint16_t tcSequence, uint8_t commandId, AckPacket::Stag
   send(packet, size, ackSequence_);
 }
 
+void GroundLink::sendEvent(const EventPacket::Event& event) {
+  uint8_t packet[EventPacket::kPacketSize];
+  size_t size = EventPacket::encode(event, eventSequence_, packet, sizeof(packet));
+  send(packet, size, eventSequence_);
+}
+
 size_t GroundLink::receiveTelecommand(uint8_t* buffer, size_t capacity) {
   if (!connected()) return 0;
   if (!tcListening_) tcListening_ = tcUdp_.begin(tcPort_);
