@@ -14,6 +14,7 @@ TCは、直近にTMを送ってきた衛星のIPアドレスへ送る。TMが届
     APID 100 GNSSテレメトリ  lib/TelemetryPacket/src/TelemetryPacket.h
     APID 101 HK             lib/TelemetryPacket/src/HousekeepingPacket.h
     APID 102 ACK            lib/TelemetryPacket/src/AckPacket.h
+    APID 103 イベント        lib/TelemetryPacket/src/EventPacket.h
     APID 110 TC             lib/Satellite/src/Telecommand.h
 """
 
@@ -28,6 +29,7 @@ PRIMARY_HEADER = struct.Struct(">HHH")
 APID_GNSS = 100
 APID_HOUSEKEEPING = 101
 APID_ACK = 102
+APID_EVENT = 103
 APID_TELECOMMAND = 110
 
 # time, ms, lat, lon, alt, sats, fixQuality, fixType, flags, uptime, ok, err
@@ -36,6 +38,8 @@ GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
 HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHB")
 # tcSequence, commandId, stage, errorCode
 ACK_PAYLOAD = struct.Struct(">HBBB")
+# severity, eventId, arg1, arg2
+EVENT_PAYLOAD = struct.Struct(">BBHH")
 
 FLAG_TIME_VALID = 1 << 0
 FLAG_DATE_VALID = 1 << 1
@@ -55,6 +59,15 @@ ERROR_CODE = {
     3: "INVALID_ARGUMENT",
     4: "NOT_ALLOWED",
     5: "MALFORMED_PACKET",
+}
+EVENT_SEVERITY = {0: "INFO", 1: "WATCH", 2: "WARNING", 3: "DISTRESS", 4: "CRITICAL", 5: "SEVERE"}
+EVENT_ID = {
+    1: "BOOT",
+    2: "MODE_CHANGED",
+    3: "PAYLOAD_POWER_CHANGED",
+    4: "TM_INTERVAL_CHANGED",
+    5: "COUNTERS_RESET",
+    6: "COMMAND_REJECTED",
 }
 # ESP-IDF の esp_reset_reason_t
 RESET_REASON = {
@@ -134,6 +147,24 @@ def format_ack(data):
     return text
 
 
+def format_event(data):
+    severity, event_id, arg1, arg2 = unpack_payload(EVENT_PAYLOAD, data)
+    name = EVENT_ID.get(event_id, event_id)
+    if name == "BOOT":
+        detail = f"boot={arg1} reset={RESET_REASON.get(arg2, arg2)}"
+    elif name == "MODE_CHANGED":
+        detail = f"{MODE.get(arg1, arg1)} -> {MODE.get(arg2, arg2)}"
+    elif name == "PAYLOAD_POWER_CHANGED":
+        detail = "ON" if arg1 else "OFF"
+    elif name == "TM_INTERVAL_CHANGED":
+        detail = f"{arg1}ms"
+    elif name == "COMMAND_REJECTED":
+        detail = f"{COMMAND.get(arg1, arg1)} {ERROR_CODE.get(arg2, arg2)}"
+    else:
+        detail = f"arg1={arg1} arg2={arg2}"
+    return f"EVT  {EVENT_SEVERITY.get(severity, severity)} {name} {detail}"
+
+
 def format_telecommand(data):
     header = decode_header(data)
     command_id = data[PRIMARY_HEADER.size] if len(data) > PRIMARY_HEADER.size else None
@@ -141,7 +172,12 @@ def format_telecommand(data):
     return f"TC   seq={header['seq']} {COMMAND.get(command_id, command_id)} args={args.hex() or '-'}"
 
 
-FORMATTERS = {APID_GNSS: format_gnss, APID_HOUSEKEEPING: format_housekeeping, APID_ACK: format_ack}
+FORMATTERS = {
+    APID_GNSS: format_gnss,
+    APID_HOUSEKEEPING: format_housekeeping,
+    APID_ACK: format_ack,
+    APID_EVENT: format_event,
+}
 
 
 def main():
@@ -175,7 +211,7 @@ def main():
         satellite_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print(f"Uplinking TC from udp://127.0.0.1:{args.uplink_port} to the satellite port {args.satellite_tc_port}")
 
-    # シーケンス番号はAPIDごとに数えられている
+    # シーケンス番号は送り主とAPIDごとに数えられている
     last_seq = {}
     satellite_addr = None
     try:
@@ -223,11 +259,12 @@ def main():
 
             # シーケンス番号の飛びからパケットロスを検出する(14bitで一周する)
             apid = header["apid"]
-            if apid in last_seq:
-                lost = (header["seq"] - last_seq[apid] - 1) & 0x3FFF
+            key = (addr, apid)
+            if key in last_seq:
+                lost = (header["seq"] - last_seq[key] - 1) & 0x3FFF
                 if lost:
                     print(f"[{addr}] apid={apid}: {lost} packet(s) lost")
-            last_seq[apid] = header["seq"]
+            last_seq[key] = header["seq"]
 
             print(f"[{addr}] apid={apid} seq={header['seq']:5d} {text}")
     except KeyboardInterrupt:

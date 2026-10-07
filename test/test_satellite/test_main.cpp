@@ -1,4 +1,5 @@
 #include <AckPacket.h>
+#include <EventPacket.h>
 #include <Satellite.h>
 #include <Telecommand.h>
 #include <unity.h>
@@ -7,6 +8,8 @@
 
 using Telecommand::CommandId;
 using Telecommand::ErrorCode;
+using EventPacket::EventId;
+using EventPacket::Severity;
 using OperationMode = Satellite::OperationMode;
 
 namespace {
@@ -168,7 +171,7 @@ void test_reset_counters() {
   Satellite sat;
   send(sat, CommandId::NoOp);
   send(sat, CommandId::NoOp, {0x01});  // 拒否
-  sat.countRejected();
+  sat.reject(0, ErrorCode::MalformedPacket);
   TEST_ASSERT_EQUAL_UINT16(2, sat.rejectedCommands());
 
   TEST_ASSERT_TRUE(send(sat, CommandId::ResetCounters).accepted);
@@ -200,6 +203,108 @@ void test_fill_housekeeping() {
   TEST_ASSERT_EQUAL_UINT8(4, hk.lastCommandId);
 }
 
+// --- イベント ---
+
+namespace {
+
+std::vector<EventPacket::Event> drainEvents(Satellite& sat) {
+  std::vector<EventPacket::Event> events;
+  EventPacket::Event e;
+  while (sat.popEvent(&e)) events.push_back(e);
+  return events;
+}
+
+}  // namespace
+
+void test_no_events_initially_and_for_no_op() {
+  Satellite sat;
+  send(sat, CommandId::NoOp);
+  send(sat, CommandId::Beep, u16(300));
+  TEST_ASSERT_EQUAL(0, drainEvents(sat).size());
+}
+
+void test_safe_mode_reports_mode_and_payload_events() {
+  Satellite sat;
+  send(sat, CommandId::SetMode, {0});
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_EQUAL(2, events.size());
+  TEST_ASSERT_TRUE(events[0].id == EventId::ModeChanged);
+  TEST_ASSERT_EQUAL_UINT16(1, events[0].arg1);  // NOMINAL
+  TEST_ASSERT_EQUAL_UINT16(0, events[0].arg2);  // SAFE
+  TEST_ASSERT_TRUE(events[1].id == EventId::PayloadPowerChanged);
+  TEST_ASSERT_EQUAL_UINT16(0, events[1].arg1);
+  TEST_ASSERT_TRUE(events[1].severity == Severity::Info);
+}
+
+void test_unchanged_state_reports_nothing() {
+  Satellite sat;
+  send(sat, CommandId::SetMode, {1});          // すでに NOMINAL
+  send(sat, CommandId::PayloadPower, {1});     // すでに ON
+  TEST_ASSERT_EQUAL(0, drainEvents(sat).size());
+}
+
+void test_payload_off_during_mission_reports_both() {
+  Satellite sat;
+  send(sat, CommandId::SetMode, {2});
+  drainEvents(sat);
+  send(sat, CommandId::PayloadPower, {0});
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_EQUAL(2, events.size());
+  TEST_ASSERT_TRUE(events[0].id == EventId::PayloadPowerChanged);
+  TEST_ASSERT_TRUE(events[1].id == EventId::ModeChanged);
+  TEST_ASSERT_EQUAL_UINT16(2, events[1].arg1);  // MISSION
+  TEST_ASSERT_EQUAL_UINT16(1, events[1].arg2);  // NOMINAL
+}
+
+void test_tm_interval_and_counter_reset_events() {
+  Satellite sat;
+  send(sat, CommandId::SetTmInterval, u16(2000));
+  send(sat, CommandId::ResetCounters);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_EQUAL(2, events.size());
+  TEST_ASSERT_TRUE(events[0].id == EventId::TmIntervalChanged);
+  TEST_ASSERT_EQUAL_UINT16(2000, events[0].arg1);
+  TEST_ASSERT_TRUE(events[1].id == EventId::CountersReset);
+}
+
+void test_rejected_command_reports_warning_with_reason() {
+  Satellite sat;
+  send(sat, CommandId::SetTmInterval, u16(50));
+  sat.reject(0, ErrorCode::MalformedPacket);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_EQUAL(2, events.size());
+  TEST_ASSERT_TRUE(events[0].severity == Severity::Warning);
+  TEST_ASSERT_TRUE(events[0].id == EventId::CommandRejected);
+  TEST_ASSERT_EQUAL_UINT16(3, events[0].arg1);  // SET_TM_INTERVAL
+  TEST_ASSERT_EQUAL_UINT16(static_cast<uint16_t>(ErrorCode::InvalidArgument), events[0].arg2);
+  TEST_ASSERT_EQUAL_UINT16(static_cast<uint16_t>(ErrorCode::MalformedPacket), events[1].arg2);
+}
+
+void test_event_queue_drops_oldest_when_full() {
+  EventQueue queue;
+  for (uint16_t i = 0; i < EventQueue::kCapacity + 3; i++) {
+    EventPacket::Event e;
+    e.arg1 = i;
+    queue.push(e);
+  }
+  TEST_ASSERT_EQUAL(EventQueue::kCapacity, queue.size());
+  EventPacket::Event e;
+  TEST_ASSERT_TRUE(queue.pop(&e));
+  TEST_ASSERT_EQUAL_UINT16(3, e.arg1);
+}
+
+void test_event_packet() {
+  EventPacket::Event e;
+  e.severity = Severity::Warning;
+  e.id = EventId::CommandRejected;
+  e.arg1 = 3;
+  e.arg2 = 0x0102;
+  uint8_t buf[EventPacket::kPacketSize];
+  TEST_ASSERT_EQUAL(12, EventPacket::encode(e, 5, buf, sizeof(buf)));
+  const uint8_t expected[] = {0x00, 0x67, 0xC0, 0x05, 0x00, 0x05, 0x02, 0x06, 0x00, 0x03, 0x01, 0x02};
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, buf, sizeof(expected));
+}
+
 // --- ACKパケット ---
 
 void test_ack_packet() {
@@ -226,6 +331,14 @@ int main(int, char**) {
   RUN_TEST(test_reset_counters);
   RUN_TEST(test_beep_duration);
   RUN_TEST(test_fill_housekeeping);
+  RUN_TEST(test_no_events_initially_and_for_no_op);
+  RUN_TEST(test_safe_mode_reports_mode_and_payload_events);
+  RUN_TEST(test_unchanged_state_reports_nothing);
+  RUN_TEST(test_payload_off_during_mission_reports_both);
+  RUN_TEST(test_tm_interval_and_counter_reset_events);
+  RUN_TEST(test_rejected_command_reports_warning_with_reason);
+  RUN_TEST(test_event_queue_drops_oldest_when_full);
+  RUN_TEST(test_event_packet);
   RUN_TEST(test_ack_packet);
   return UNITY_END();
 }

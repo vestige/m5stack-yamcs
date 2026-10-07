@@ -2,6 +2,7 @@
 
 namespace {
 
+using EventPacket::EventId;
 using Telecommand::CommandId;
 using Telecommand::ErrorCode;
 
@@ -26,7 +27,7 @@ Satellite::Result Satellite::handle(const Telecommand::Packet& tc) {
   Result result;
   result.error = validate(tc);
   if (result.error != ErrorCode::None) {
-    rejectedCommands_++;
+    reject(tc.commandId, result.error);
     return result;
   }
 
@@ -35,6 +36,16 @@ Satellite::Result Satellite::handle(const Telecommand::Packet& tc) {
   lastCommandId_ = tc.commandId;
   execute(tc, &result);
   return result;
+}
+
+void Satellite::reject(uint8_t commandId, ErrorCode error) {
+  rejectedCommands_++;
+  EventPacket::Event event;
+  event.severity = EventPacket::Severity::Warning;
+  event.id = EventId::CommandRejected;
+  event.arg1 = commandId;
+  event.arg2 = static_cast<uint16_t>(error);
+  report(event);
 }
 
 ErrorCode Satellite::validate(const Telecommand::Packet& tc) const {
@@ -74,27 +85,52 @@ void Satellite::execute(const Telecommand::Packet& tc, Result* result) {
   switch (static_cast<CommandId>(tc.commandId)) {
     case CommandId::NoOp:
       break;
-    case CommandId::SetMode:
-      mode_ = static_cast<OperationMode>(tc.args[0]);
+    case CommandId::SetMode: {
+      OperationMode mode = static_cast<OperationMode>(tc.args[0]);
+      changeMode(mode);
       // SAFEでは最低限の機能だけ動かすので、ペイロードを切る
-      if (mode_ == OperationMode::Safe) payloadPower_ = false;
+      if (mode == OperationMode::Safe) changePayloadPower(false);
       break;
+    }
     case CommandId::SetTmInterval:
       tmIntervalMs_ = readU16(tc.args);
+      reportInfo(EventId::TmIntervalChanged, tmIntervalMs_);
       break;
     case CommandId::PayloadPower:
-      payloadPower_ = tc.args[0] == 1;
+      changePayloadPower(tc.args[0] == 1);
       // 観測中にペイロードを切ったら観測は続けられないので NOMINAL に戻す
-      if (!payloadPower_ && mode_ == OperationMode::Mission) mode_ = OperationMode::Nominal;
+      if (!payloadPower_ && mode_ == OperationMode::Mission) changeMode(OperationMode::Nominal);
       break;
     case CommandId::ResetCounters:
       acceptedCommands_ = 0;
       rejectedCommands_ = 0;
+      reportInfo(EventId::CountersReset);
       break;
     case CommandId::Beep:
       result->beepMs = readU16(tc.args);
       break;
   }
+}
+
+void Satellite::changeMode(OperationMode mode) {
+  if (mode == mode_) return;
+  reportInfo(EventId::ModeChanged, static_cast<uint16_t>(mode_), static_cast<uint16_t>(mode));
+  mode_ = mode;
+}
+
+void Satellite::changePayloadPower(bool on) {
+  if (on == payloadPower_) return;
+  payloadPower_ = on;
+  reportInfo(EventId::PayloadPowerChanged, on ? 1 : 0);
+}
+
+void Satellite::reportInfo(EventId id, uint16_t arg1, uint16_t arg2) {
+  EventPacket::Event event;
+  event.severity = EventPacket::Severity::Info;
+  event.id = id;
+  event.arg1 = arg1;
+  event.arg2 = arg2;
+  report(event);
 }
 
 void Satellite::fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const {

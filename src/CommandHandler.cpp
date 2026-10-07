@@ -19,11 +19,9 @@ void CommandHandler::handle(const uint8_t* data, size_t size) {
   bool hasHeader = false;
   Telecommand::ErrorCode parseError = Telecommand::parse(data, size, &tc, &hasHeader);
   if (parseError != Telecommand::ErrorCode::None) {
-    satellite_.countRejected();
-    if (hasHeader) {
-      uint8_t commandId = size > Telecommand::kPrimaryHeaderSize ? data[Telecommand::kPrimaryHeaderSize] : 0;
-      ack(tc.sequenceCount, commandId, AckPacket::Stage::Rejected, parseError);
-    }
+    uint8_t commandId = size > Telecommand::kPrimaryHeaderSize ? data[Telecommand::kPrimaryHeaderSize] : 0;
+    satellite_.reject(commandId, parseError);
+    if (hasHeader) ack(tc.sequenceCount, commandId, AckPacket::Stage::Rejected, parseError);
     return;
   }
 
