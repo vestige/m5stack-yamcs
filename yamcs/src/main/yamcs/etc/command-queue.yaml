@@ -1,0 +1,15 @@
+# コマンドの待ち行列 (Commanding → Queues)
+#
+#   enabled:  すぐ衛星へ送る
+#   blocked:  待ち行列に溜めておき、運用者が承認 (Release) すると送る
+#   disabled: 受け付けない
+#
+# コマンドは、重要度 (MDB の DefaultSignificance) が minLevel 以上の待ち行列に入る
+
+# 衛星の状態を大きく変えるコマンド (SET_MODE, SET_FDIR) は承認してから送る
+supervised:
+  state: blocked
+  minLevel: critical
+
+default:
+  state: enabled

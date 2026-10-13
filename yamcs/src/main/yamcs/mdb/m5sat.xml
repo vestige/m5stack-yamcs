@@ -392,12 +392,24 @@ switch (severity.value) {
 						<Enumeration value="1" label="ON" />
 					</EnumerationList>
 				</EnumeratedArgumentType>
-				<!-- 範囲のチェックは衛星側だけで行う (地上側のチェックは 5-5 で入れる) -->
-				<IntegerArgumentType name="Milliseconds_Arg_Type" signed="false">
+				<!-- 地上でも範囲外の値を止める。衛星側も同じ範囲で検査している (二重の守り) -->
+				<IntegerArgumentType name="Tm_Interval_Arg_Type" signed="false">
 					<UnitSet>
 						<Unit>ms</Unit>
 					</UnitSet>
 					<IntegerDataEncoding sizeInBits="16" />
+					<ValidRangeSet>
+						<ValidRange minInclusive="200" maxInclusive="10000" />
+					</ValidRangeSet>
+				</IntegerArgumentType>
+				<IntegerArgumentType name="Beep_Duration_Arg_Type" signed="false">
+					<UnitSet>
+						<Unit>ms</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="16" />
+					<ValidRangeSet>
+						<ValidRange minInclusive="50" maxInclusive="2000" />
+					</ValidRangeSet>
 				</IntegerArgumentType>
 			</ArgumentTypeSet>
 
@@ -509,6 +521,26 @@ switch (severity.value) {
 						</EntryList>
 						<BaseContainer containerRef="M5SatCommand" />
 					</CommandContainer>
+					<!-- MISSION にするのは、ペイロードの電源が入っているときだけ -->
+					<TransmissionConstraintList>
+						<TransmissionConstraint>
+							<BooleanExpression>
+								<ORedConditions>
+									<Condition>
+										<ParameterInstanceRef parameterRef="/yamcs/cmd/arg/Mode" />
+										<ComparisonOperator>!=</ComparisonOperator>
+										<Value>MISSION</Value>
+									</Condition>
+									<Condition>
+										<ParameterInstanceRef parameterRef="PayloadPower" />
+										<ComparisonOperator>==</ComparisonOperator>
+										<Value>ON</Value>
+									</Condition>
+								</ORedConditions>
+							</BooleanExpression>
+						</TransmissionConstraint>
+					</TransmissionConstraintList>
+					<DefaultSignificance consequenceLevel="critical" reasonForWarning="衛星の運用モードが変わります" />
 				</MetaCommand>
 				<MetaCommand name="SET_TM_INTERVAL" shortDescription="テレメトリの送信周期を変える (200〜10000ms)">
 					<BaseMetaCommand metaCommandRef="M5SatCommand">
@@ -517,7 +549,7 @@ switch (severity.value) {
 						</ArgumentAssignmentList>
 					</BaseMetaCommand>
 					<ArgumentList>
-						<Argument name="Interval" argumentTypeRef="Milliseconds_Arg_Type" />
+						<Argument name="Interval" argumentTypeRef="Tm_Interval_Arg_Type" />
 					</ArgumentList>
 					<CommandContainer name="SET_TM_INTERVAL">
 						<EntryList>
@@ -541,6 +573,13 @@ switch (severity.value) {
 						</EntryList>
 						<BaseContainer containerRef="M5SatCommand" />
 					</CommandContainer>
+					<!-- SAFEは異常からの退避中なので、ペイロードを操作しない -->
+					<TransmissionConstraintList>
+						<TransmissionConstraint>
+							<Comparison parameterRef="Mode" comparisonOperator="!=" value="SAFE" />
+						</TransmissionConstraint>
+					</TransmissionConstraintList>
+					<DefaultSignificance consequenceLevel="vital" reasonForWarning="ペイロードの電源を切り替えます" />
 				</MetaCommand>
 				<MetaCommand name="RESET_COUNTERS" shortDescription="コマンドカウンタをリセットする">
 					<BaseMetaCommand metaCommandRef="M5SatCommand">
@@ -552,6 +591,7 @@ switch (severity.value) {
 						<EntryList />
 						<BaseContainer containerRef="M5SatCommand" />
 					</CommandContainer>
+					<DefaultSignificance consequenceLevel="vital" reasonForWarning="コマンドカウンタが0に戻ります" />
 				</MetaCommand>
 				<MetaCommand name="BEEP" shortDescription="スピーカーを鳴らす (50〜2000ms)">
 					<BaseMetaCommand metaCommandRef="M5SatCommand">
@@ -560,7 +600,7 @@ switch (severity.value) {
 						</ArgumentAssignmentList>
 					</BaseMetaCommand>
 					<ArgumentList>
-						<Argument name="Duration" argumentTypeRef="Milliseconds_Arg_Type" />
+						<Argument name="Duration" argumentTypeRef="Beep_Duration_Arg_Type" />
 					</ArgumentList>
 					<CommandContainer name="BEEP">
 						<EntryList>
@@ -584,6 +624,7 @@ switch (severity.value) {
 						</EntryList>
 						<BaseContainer containerRef="M5SatCommand" />
 					</CommandContainer>
+					<DefaultSignificance consequenceLevel="critical" reasonForWarning="異常時の自動退避の有効・無効が変わります" />
 				</MetaCommand>
 			</MetaCommandSet>
 		</CommandMetaData>
