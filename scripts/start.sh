@@ -3,6 +3,7 @@
 #
 #   M5Stack → :10015 udp_receiver.py (ログ記録) → :10016 YAMCS → http://localhost:8090
 #   M5Stack ← :10025 udp_receiver.py (TCの中継) ← :10025 YAMCS
+#   M5Stack ~ ESP-NOW ~ M5StickC ─USB─ udp_receiver.py   (.env に GROUND_STATION_SERIAL を書いたとき)
 #
 # ログ: logs/yamcs.log, logs/udp_receiver.log
 set -euo pipefail
@@ -59,9 +60,18 @@ start_udp_receiver() {
 
   local python
   python="$(find_python)"
-  echo "udp_receiver: starting (TM udp :$RECEIVER_PORT -> :$YAMCS_TM_PORT, TC udp :$UPLINK_PORT -> satellite)"
+  local serial_args=()
+  if [[ -n "$GROUND_STATION_SERIAL" ]]; then
+    if [[ ! -e "$GROUND_STATION_SERIAL" ]]; then
+      echo "udp_receiver: 地上局の無線機 $GROUND_STATION_SERIAL が見つかりません。USBの接続を確認してください" >&2
+      exit 1
+    fi
+    serial_args=(--serial "$GROUND_STATION_SERIAL")
+  fi
+  echo "udp_receiver: starting (TM udp :$RECEIVER_PORT -> :$YAMCS_TM_PORT, TC udp :$UPLINK_PORT -> satellite${GROUND_STATION_SERIAL:+, ESP-NOW $GROUND_STATION_SERIAL})"
   nohup "$python" -u "$ROOT_DIR/tools/udp_receiver.py" --port "$RECEIVER_PORT" \
-    --forward "127.0.0.1:$YAMCS_TM_PORT" --uplink-port "$UPLINK_PORT" >"$(log_file udp_receiver)" 2>&1 &
+    --forward "127.0.0.1:$YAMCS_TM_PORT" --uplink-port "$UPLINK_PORT" ${serial_args[@]+"${serial_args[@]}"} \
+    >"$(log_file udp_receiver)" 2>&1 &
   echo $! >"$(pid_file udp_receiver)"
 
   sleep 1

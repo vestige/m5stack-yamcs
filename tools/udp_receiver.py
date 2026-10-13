@@ -20,9 +20,12 @@ TCは、直近にTMを送ってきた衛星のIPアドレスへ送る。TMが届
 
 import argparse
 import datetime
+import os
 import select
 import socket
 import struct
+import termios
+import time
 
 PRIMARY_HEADER = struct.Struct(">HHH")
 
@@ -180,6 +183,76 @@ FORMATTERS = {
 }
 
 
+SYNC_MARKER = bytes([0x1A, 0xCF, 0xFC, 0x1D])
+MAX_FRAME_PAYLOAD = 256
+
+
+def crc16(data, crc=0xFFFF):
+    """CRC-16-CCITT (初期値 0xFFFF, 多項式 0x1021)。lib/SerialFrame と同じ"""
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1021) & 0xFFFF if crc & 0x8000 else (crc << 1) & 0xFFFF
+    return crc
+
+
+def encode_frame(payload):
+    body = struct.pack(">H", len(payload)) + payload
+    return SYNC_MARKER + body + struct.pack(">H", crc16(body))
+
+
+class FrameDecoder:
+    """シリアルのバイトの流れから、ASMで区切られたフレームを取り出す"""
+
+    def __init__(self):
+        self.buffer = bytearray()
+        self.crc_errors = 0
+
+    def feed(self, data):
+        self.buffer += data
+        frames = []
+        while True:
+            start = self.buffer.find(SYNC_MARKER)
+            if start < 0:
+                # 印の先頭が途中まで届いているかもしれないので、末尾3バイトは残す
+                del self.buffer[:-3]
+                return frames
+            del self.buffer[:start]
+            if len(self.buffer) < 6:
+                return frames
+            (size,) = struct.unpack_from(">H", self.buffer, 4)
+            if size > MAX_FRAME_PAYLOAD:
+                del self.buffer[:1]
+                continue
+            if len(self.buffer) < 6 + size + 2:
+                return frames
+            body = bytes(self.buffer[4:6 + size])
+            (crc,) = struct.unpack_from(">H", self.buffer, 6 + size)
+            if crc == crc16(body):
+                frames.append(body[2:])
+                del self.buffer[:6 + size + 2]
+            else:
+                self.crc_errors += 1
+                del self.buffer[:1]
+
+
+def open_serial(path, baud):
+    """pyserial を使わずに、シリアルポートを raw モードで開く"""
+    fd = os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+    attrs = termios.tcgetattr(fd)
+    attrs[0] = 0                                                   # iflag
+    attrs[1] = 0                                                   # oflag
+    attrs[2] = termios.CS8 | termios.CREAD | termios.CLOCAL        # cflag
+    attrs[3] = 0                                                   # lflag
+    speed = getattr(termios, f"B{baud}")
+    attrs[4] = attrs[5] = speed
+    attrs[6][termios.VMIN] = 0
+    attrs[6][termios.VTIME] = 0
+    termios.tcsetattr(fd, termios.TCSANOW, attrs)
+    termios.tcflush(fd, termios.TCIOFLUSH)
+    return fd
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--host", default="0.0.0.0", help="待ち受けるアドレス (default: 0.0.0.0)")
@@ -188,6 +261,8 @@ def main():
     parser.add_argument("--forward", metavar="HOST:PORT", help="受信したパケットをそのまま転送する先 (例: YAMCS)")
     parser.add_argument("--uplink-port", type=int, help="YAMCSからTCを受け取る 127.0.0.1 のUDPポート (例: 10025)")
     parser.add_argument("--satellite-tc-port", type=int, default=10025, help="衛星がTCを待ち受けるポート (default: 10025)")
+    parser.add_argument("--serial", metavar="PATH", help="地上局の無線機 (M5StickC) のシリアルポート")
+    parser.add_argument("--baud", type=int, default=115200, help="シリアルの速度 (default: 115200)")
     args = parser.parse_args()
 
     forward_to = None
@@ -203,70 +278,135 @@ def main():
         forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print(f"Forwarding to udp://{forward_to[0]}:{forward_to[1]}")
     uplink_sock = None
+    satellite_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     if args.uplink_port:
         # YAMCSからは 127.0.0.1 で受け取り、衛星へは別のソケットで送る
         # (127.0.0.1 に結び付けたソケットからはLAN上の相手に送れない)
         uplink_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         uplink_sock.bind(("127.0.0.1", args.uplink_port))
-        satellite_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print(f"Uplinking TC from udp://127.0.0.1:{args.uplink_port} to the satellite port {args.satellite_tc_port}")
+        print(f"Uplinking TC from udp://127.0.0.1:{args.uplink_port} to the satellite")
+    serial_fd = None
+    decoder = FrameDecoder()
+    serial_retry_at = 0.0
+    serial_retrying = False
+
+    def connect_serial():
+        """地上局の無線機のシリアルを開く。USBが抜かれていたら、あとでもう一度試す"""
+        nonlocal serial_fd, serial_retry_at, serial_retrying, decoder
+        try:
+            serial_fd = open_serial(args.serial, args.baud)
+            decoder = FrameDecoder()
+            serial_retrying = False
+            print(f"Listening on serial {args.serial} ({args.baud} baud, ESP-NOW ground station)")
+        except OSError as e:
+            serial_fd = None
+            serial_retry_at = time.monotonic() + 2.0
+            # 抜かれている間、ログが同じ行で埋まらないよう最初の1回だけ出す
+            if not serial_retrying:
+                print(f"[serial] cannot open {args.serial} ({e.strerror}), retrying every 2s")
+            serial_retrying = True
+
+    def disconnect_serial(reason):
+        nonlocal serial_fd, serial_retry_at, satellite_route
+        print(f"[serial] {args.serial} disconnected ({reason})")
+        try:
+            os.close(serial_fd)
+        except OSError:
+            pass
+        serial_fd = None
+        serial_retry_at = time.monotonic() + 2.0
+        if satellite_route == ("serial", None):
+            satellite_route = None
 
     # シーケンス番号は送り主とAPIDごとに数えられている
     last_seq = {}
-    satellite_addr = None
+    # 衛星へTCを送る経路: ("udp", IPアドレス) または ("serial", None)
+    satellite_route = None
+    if args.serial:
+        connect_serial()
+
+    def handle_telemetry(data, origin, route):
+        nonlocal satellite_route
+        if forward_sock:
+            # 中身の検査は転送先(YAMCS)に任せ、届いたものはすべて転送する。
+            # 転送先が止まっていても受信は続ける
+            try:
+                forward_sock.sendto(data, forward_to)
+            except OSError:
+                pass
+        if args.raw:
+            print(f"[{origin}] {data.hex(' ')}")
+
+        try:
+            header = decode_header(data)
+            formatter = FORMATTERS.get(header["apid"])
+            if formatter is None:
+                raise ValueError(f"unknown APID {header['apid']}")
+            text = formatter(data)
+        except ValueError as e:
+            print(f"[{origin}] invalid packet: {e}")
+            return
+        # 正しいTMが届いた経路を、TCの送り先にする
+        satellite_route = route
+
+        # シーケンス番号の飛びからパケットロスを検出する(14bitで一周する)
+        apid = header["apid"]
+        key = (origin, apid)
+        if key in last_seq:
+            lost = (header["seq"] - last_seq[key] - 1) & 0x3FFF
+            if lost:
+                print(f"[{origin}] apid={apid}: {lost} packet(s) lost")
+        last_seq[key] = header["seq"]
+
+        print(f"[{origin}] apid={apid} seq={header['seq']:5d} {text}")
+
+    def uplink(tc):
+        try:
+            text = format_telecommand(tc)
+        except ValueError as e:
+            text = f"TC   (invalid: {e})"
+        if satellite_route is None:
+            print(f"[uplink] satellite not in view, dropped: {text}")
+            return
+        kind, addr = satellite_route
+        target = addr if kind == "udp" else "serial"
+        try:
+            if kind == "udp":
+                satellite_sock.sendto(tc, (addr, args.satellite_tc_port))
+            elif serial_fd is None:
+                raise OSError("ground station is disconnected")
+            else:
+                os.write(serial_fd, encode_frame(tc))
+            print(f"[uplink -> {target}] {text}")
+        except OSError as e:
+            print(f"[uplink -> {target}] send failed ({e}): {text}")
+
     try:
         while True:
-            readable, _, _ = select.select([s for s in (sock, uplink_sock) if s], [], [])
+            if args.serial and serial_fd is None and time.monotonic() >= serial_retry_at:
+                connect_serial()
+            sources = [s for s in (sock, uplink_sock, serial_fd) if s is not None]
+            readable, _, _ = select.select(sources, [], [], 1.0)
             if uplink_sock in readable:
                 tc, _ = uplink_sock.recvfrom(2048)
-                if satellite_addr is None:
-                    print(f"[uplink] satellite not in view, dropped: {tc.hex(' ')}")
-                else:
-                    try:
-                        text = format_telecommand(tc)
-                    except ValueError as e:
-                        text = f"TC   (invalid: {e})"
-                    try:
-                        satellite_sock.sendto(tc, (satellite_addr, args.satellite_tc_port))
-                        print(f"[uplink -> {satellite_addr}] {text}")
-                    except OSError as e:
-                        print(f"[uplink -> {satellite_addr}] send failed ({e}): {text}")
-            if sock not in readable:
-                continue
-
-            data, (addr, _) = sock.recvfrom(2048)
-            if forward_sock:
-                # 中身の検査は転送先(YAMCS)に任せ、届いたものはすべて転送する。
-                # 転送先が止まっていても受信は続ける
+                uplink(tc)
+            if sock in readable:
+                data, (addr, _) = sock.recvfrom(2048)
+                handle_telemetry(data, addr, ("udp", addr))
+            if serial_fd is not None and serial_fd in readable:
                 try:
-                    forward_sock.sendto(data, forward_to)
-                except OSError:
-                    pass
-            if args.raw:
-                print(f"[{addr}] {data.hex(' ')}")
-
-            try:
-                header = decode_header(data)
-                formatter = FORMATTERS.get(header["apid"])
-                if formatter is None:
-                    raise ValueError(f"unknown APID {header['apid']}")
-                text = formatter(data)
-            except ValueError as e:
-                print(f"[{addr}] invalid packet: {e}")
-                continue
-            # 正しいTMを送ってきた相手を衛星とみなし、TCの送り先にする
-            satellite_addr = addr
-
-            # シーケンス番号の飛びからパケットロスを検出する(14bitで一周する)
-            apid = header["apid"]
-            key = (addr, apid)
-            if key in last_seq:
-                lost = (header["seq"] - last_seq[key] - 1) & 0x3FFF
-                if lost:
-                    print(f"[{addr}] apid={apid}: {lost} packet(s) lost")
-            last_seq[key] = header["seq"]
-
-            print(f"[{addr}] apid={apid} seq={header['seq']:5d} {text}")
+                    chunk = os.read(serial_fd, 4096)
+                except BlockingIOError:
+                    continue
+                except OSError as e:
+                    disconnect_serial(e.strerror)
+                    continue
+                if not chunk:
+                    # 読める状態なのに0バイト → USBが抜かれた
+                    disconnect_serial("end of file")
+                    continue
+                for frame in decoder.feed(chunk):
+                    handle_telemetry(frame, "esp-now", ("serial", None))
     except KeyboardInterrupt:
         pass
 

@@ -85,6 +85,7 @@ M5Stackの画面は1秒ごとに更新し、ボタンでページを切り替え
 | A（左） | INFO | 日付・時刻・緯度経度・高度・衛星数 |
 | B（中） | SATS | 衛星システム別の内訳と、衛星ごとの信号強度 |
 | C（右） | SYS | 衛星システムごとの名前・運用国と、見えている衛星番号の一覧 |
+| C（右）を2秒長押し | - | 地上局との回線を Wi-Fi（UDP）⇔ ESP-NOW で切り替えて再起動する（ESP-NOW の節を参照） |
 
 右上のバッジはFix statusを表し、`3D FIX`（緑）、`2D FIX`（黄）、`NO FIX`（赤）、`NO DATA`（灰：3秒以上NMEAを受信できていない）のいずれかになります。
 
@@ -163,6 +164,43 @@ M5StackのINFO画面の下部にWi-Fiの接続状態と送信したパケット�
 | 44 | 4 | uint32 | チェックサムエラー数 |
 
 Sequence countは送信のたびに1増えます（14bitで一周）。受信スクリプトはこの番号の飛びからパケットロスを検出します。
+
+#### ESP-NOW で地上局の無線機とつなぐ
+
+Wi-Fiのアクセスポイントを使える場所ばかりではありません。5GHz専用だったり、つないだ機器どうしの通信が禁止されていたり（クライアント分離）すると、UDPではMacに届きません。そこで、もう1台のESP32（M5StickC）を**地上局の無線機**にして、ESP-NOWで衛星と直接やり取りする回線も用意しています。
+
+```text
+衛星 (M5Stack)  ~~~ ESP-NOW (2.4GHz) ~~~  地上局の無線機 (M5StickC)  ──USB──  Mac (受信スクリプト → YAMCS)
+```
+
+- 衛星はTMをブロードキャストで送ります。地上局の無線機は、TMを送ってきた衛星を覚え、その衛星へTCを送ります
+- 地上局の無線機とMacの間は、USBシリアルでパケットをやり取りします。パケットの区切りには、CCSDSの通信と同じ同期用の印（ASM `1A CF FC 1D`）と、CRC-16を使います（[lib/SerialFrame](lib/SerialFrame/src/SerialFrame.h)）
+- 地上局の無線機の画面には、衛星からの電波が届いているか（AOS / LOS）、TMとTCの数、衛星のMACアドレスが出ます
+
+1. 地上局の無線機（M5StickC）にファームウェアを書き込みます。`platformio.ini` の `ground-station` の `upload_port` を、M5StickCのポートにしてください
+
+   ```sh
+   pio run -e ground-station -t upload
+   ```
+
+2. 衛星（M5Stack）の**右のボタン（C）を2秒長押し**すると、Wi-Fi（UDP）⇔ ESP-NOW が切り替わります。選んだ回線はM5Stackのフラッシュ（NVS）に保存され、M5Stackは再起動します。再起動すると `BOOT` のイベント（理由: SOFTWARE）が届くので、地上でも切り替わったことがわかります。今どちらの回線かは、INFO画面の一番下の行に出ます
+
+   まだ一度も切り替えていないときは、`include/secrets.h` の指定に従います
+
+   ```c
+   #define GROUND_LINK_ESPNOW 1   // 0: Wi-Fi (UDP), 1: ESP-NOW
+   #define ESPNOW_CHANNEL 1
+   ```
+
+3. プロジェクト直下の `.env` に、M5StickCのポートを書きます（`.env` はコミットされません）
+
+   ```sh
+   GROUND_STATION_SERIAL=/dev/cu.usbserial-XXXX
+   ```
+
+4. `scripts/start.sh` で起動すると、受信スクリプトがUDPに加えてシリアルからも受け取ります。M5StickCのUSBを抜き差ししても、受信スクリプトが自動でつなぎ直します
+
+コマンドは、Web UIのほか `python3 tools/send_command.py BEEP Duration=300` のようにターミナルからも送れます。
 
 ### Milestone 4 - YAMCS ✅
 

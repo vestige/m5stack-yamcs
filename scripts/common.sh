@@ -13,6 +13,14 @@ YAMCS_TM_PORT=10016
 UPLINK_PORT=10025
 YAMCS_URL="http://localhost:8090"
 
+# 地上局の無線機 (M5StickC) のシリアルポート。.env に書けば受信スクリプトがESP-NOWの回線も使う
+#   GROUND_STATION_SERIAL=/dev/cu.usbserial-XXXX
+GROUND_STATION_SERIAL=""
+if [[ -f "$ROOT_DIR/.env" ]]; then
+  # shellcheck disable=SC1091
+  source "$ROOT_DIR/.env"
+fi
+
 # 管理するプロセス (起動順)
 SERVICES=(yamcs udp_receiver)
 
