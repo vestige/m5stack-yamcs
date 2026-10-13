@@ -63,9 +63,10 @@ void TelemetryDisplay::begin() {
 
 bool TelemetryDisplay::handleButtons() {
   Page next = page_;
-  if (M5.BtnA.wasPressed()) next = Page::Telemetry;
-  if (M5.BtnB.wasPressed()) next = Page::Satellites;
-  if (M5.BtnC.wasPressed()) next = Page::Systems;
+  // 長押し (回線の切り替え) と区別するため、離したときに判定する
+  if (M5.BtnA.wasClicked()) next = Page::Telemetry;
+  if (M5.BtnB.wasClicked()) next = Page::Satellites;
+  if (M5.BtnC.wasClicked()) next = Page::Systems;
   if (next == page_) return false;
   page_ = next;
   return true;

@@ -4,16 +4,16 @@
 #include <EventPacket.h>
 #include <HousekeepingPacket.h>
 #include <NmeaParser.h>
-#include <WiFiUdp.h>
 
-// 地上局との通信: Wi-Fi接続、TMの送信 (APIDごとのシーケンス番号)、TCの受信
+#include "PacketTransport.h"
+
+// 地上局との通信: TMの送信 (APIDごとのシーケンス番号) とTCの受信。運び方は PacketTransport に任せる
 class GroundLink {
  public:
-  void begin(const char* ssid, const char* password, const char* host, uint16_t tmPort,
-             uint16_t tcPort);
-
-  bool connected() const;
-  int8_t rssi() const;
+  // どの回線を使うかは起動時に決まるので、begin() で渡す
+  void begin(PacketTransport& transport);
+  bool connected() const { return transport_ && transport_->ready(); }
+  int8_t rssi() const { return transport_ ? transport_->rssi() : 0; }
   uint32_t packetsSent() const { return packetsSent_; }
   void describe(char* text, size_t size) const;
 
@@ -28,14 +28,7 @@ class GroundLink {
  private:
   void send(const uint8_t* packet, size_t size, uint16_t& sequence);
 
-  const char* ssid_ = nullptr;
-  const char* host_ = nullptr;
-  uint16_t tmPort_ = 0;
-  uint16_t tcPort_ = 0;
-
-  WiFiUDP tmUdp_;
-  WiFiUDP tcUdp_;
-  bool tcListening_ = false;
+  PacketTransport* transport_ = nullptr;
   uint32_t packetsSent_ = 0;
 
   uint16_t gnssSequence_ = 0;
