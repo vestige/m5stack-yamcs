@@ -19,12 +19,18 @@
 //     22    4  uint32  uptime (ms)
 //     26    2  uint16  boot count
 //     28    1  uint8   reset reason (ESP-IDF の esp_reset_reason_t)
+//     29    1  uint8   FDIR enabled (0=OFF, 1=ON)
+//     30    1  uint8   last fault (Fault)
+//     31    2  uint16  fault count
 namespace HousekeepingPacket {
 
 const uint16_t kApid = 101;
-const size_t kPacketSize = 29;
+const size_t kPacketSize = 33;
 
 enum class OperationMode : uint8_t { Safe = 0, Nominal = 1, Mission = 2 };
+
+// FDIRが検知した異常
+enum class Fault : uint8_t { None = 0, GnssNoData = 1 };
 
 struct Housekeeping {
   OperationMode mode = OperationMode::Nominal;
@@ -38,6 +44,9 @@ struct Housekeeping {
   uint32_t uptimeMs = 0;
   uint16_t bootCount = 0;
   uint8_t resetReason = 0;
+  bool fdirEnabled = true;
+  Fault lastFault = Fault::None;
+  uint16_t faultCount = 0;
 };
 
 // パケットをbufferに書き込み、書き込んだバイト数を返す。bufferが小さければ0を返す。

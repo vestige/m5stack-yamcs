@@ -80,7 +80,23 @@
 						<Enumeration value="1" label="NOMINAL" />
 						<Enumeration value="2" label="MISSION" />
 					</EnumerationList>
+					<!-- SAFEは異常からの退避中なので、運用者に気づかせる -->
+					<DefaultAlarm>
+						<EnumerationAlarmList>
+							<EnumerationAlarm alarmLevel="warning" enumerationLabel="SAFE" />
+						</EnumerationAlarmList>
+					</DefaultAlarm>
 				</EnumeratedParameterType>
+				<EnumeratedParameterType name="Fault_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="NONE" />
+						<Enumeration value="1" label="GNSS_NO_DATA" />
+					</EnumerationList>
+				</EnumeratedParameterType>
+				<IntegerParameterType name="Fault_Count_Type" signed="false">
+					<IntegerDataEncoding sizeInBits="16" />
+				</IntegerParameterType>
 				<BooleanParameterType name="Power_Type" zeroStringValue="OFF" oneStringValue="ON">
 					<IntegerDataEncoding sizeInBits="8" />
 				</BooleanParameterType>
@@ -97,6 +113,7 @@
 						<Enumeration value="4" label="PAYLOAD_POWER" />
 						<Enumeration value="5" label="RESET_COUNTERS" />
 						<Enumeration value="6" label="BEEP" />
+						<Enumeration value="7" label="SET_FDIR" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Tc_Sequence_Type" signed="false">
@@ -131,6 +148,8 @@
 						<Enumeration value="4" label="TM_INTERVAL_CHANGED" />
 						<Enumeration value="5" label="COUNTERS_RESET" />
 						<Enumeration value="6" label="COMMAND_REJECTED" />
+						<Enumeration value="7" label="FAULT_DETECTED" />
+						<Enumeration value="8" label="FDIR_CHANGED" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Event_Arg_Type" signed="false">
@@ -199,6 +218,9 @@
 				<Parameter name="Uptime" parameterTypeRef="Uptime_Type" shortDescription="起動からの経過時間" />
 				<Parameter name="BootCount" parameterTypeRef="Boot_Count_Type" shortDescription="再起動の回数 (電源を切っても保持)" />
 				<Parameter name="ResetReason" parameterTypeRef="Reset_Reason_Type" shortDescription="前回の再起動の理由" />
+				<Parameter name="FdirEnabled" parameterTypeRef="Power_Type" shortDescription="FDIR (異常時の自動退避) が有効か" />
+				<Parameter name="LastFault" parameterTypeRef="Fault_Type" shortDescription="FDIRが最後に検知した異常" />
+				<Parameter name="FaultCount" parameterTypeRef="Fault_Count_Type" shortDescription="FDIRが異常を検知した回数" />
 				<Parameter name="AckTcSequence" parameterTypeRef="Tc_Sequence_Type" shortDescription="ACK: どのTC (シーケンス番号) への応答か" />
 				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
 				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
@@ -224,6 +246,9 @@
 						<ParameterRefEntry parameterRef="Uptime" />
 						<ParameterRefEntry parameterRef="BootCount" />
 						<ParameterRefEntry parameterRef="ResetReason" />
+						<ParameterRefEntry parameterRef="FdirEnabled" />
+						<ParameterRefEntry parameterRef="LastFault" />
+						<ParameterRefEntry parameterRef="FaultCount" />
 					</EntryList>
 					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
 						<RestrictionCriteria>
@@ -282,7 +307,8 @@
 if (Yamcs.processorName() != "realtime") return;
 
 var MODE = ["SAFE", "NOMINAL", "MISSION"];
-var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP"];
+var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP", "SET_FDIR"];
+var FAULT = ["NONE", "GNSSのデータが届きません"];
 var ERROR = ["", "知らないコマンドです", "引数の長さが違います", "引数が範囲外です",
              "今の状態では実行できません", "TCパケットとして不正です"];
 var RESET_REASON = ["UNKNOWN", "POWER_ON", "EXTERNAL", "SOFTWARE", "PANIC", "INTERRUPT_WATCHDOG",
@@ -311,6 +337,12 @@ switch (eventId.value) {
     break;
   case "COMMAND_REJECTED":
     message = "コマンド " + name(COMMAND, a1) + " を拒否しました: " + name(ERROR, a2);
+    break;
+  case "FAULT_DETECTED":
+    message = "異常を検知しました: " + name(FAULT, a1) + " (" + a2 + "秒)。ペイロードを切り、SAFEへ移行します";
+    break;
+  case "FDIR_CHANGED":
+    message = "FDIR (異常時の自動退避) を " + (a1 == 1 ? "有効" : "無効") + " にしました";
     break;
   default:
     message = "不明なイベント (" + eventId.rawValue + ", " + a1 + ", " + a2 + ")";
@@ -533,6 +565,22 @@ switch (severity.value) {
 					<CommandContainer name="BEEP">
 						<EntryList>
 							<ArgumentRefEntry argumentRef="Duration" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+				<MetaCommand name="SET_FDIR" shortDescription="FDIR (異常時の自動退避) を有効・無効にする">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="7" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="State" argumentTypeRef="Power_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="SET_FDIR">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="State" />
 						</EntryList>
 						<BaseContainer containerRef="M5SatCommand" />
 					</CommandContainer>

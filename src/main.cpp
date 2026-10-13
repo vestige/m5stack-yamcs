@@ -125,6 +125,7 @@ void setup() {
 void loop() {
   gnss.poll(satellite.payloadPower());
   commands.poll();
+  satellite.checkHealth(millis(), gnss.lastSentenceMs());
   sendEvents();
   payloadLed.show(satellite.payloadPower());
 

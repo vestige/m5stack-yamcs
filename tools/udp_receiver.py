@@ -37,8 +37,9 @@ APID_TELECOMMAND = 110
 
 # time, ms, lat, lon, alt, sats, fixQuality, fixType, flags, uptime, ok, err
 GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
-# mode, payloadPower, accepted, rejected, lastCommand, rssi, freeHeap, minFreeHeap, uptime, bootCount, resetReason
-HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHB")
+# mode, payloadPower, accepted, rejected, lastCommand, rssi, freeHeap, minFreeHeap, uptime, bootCount, resetReason,
+# fdirEnabled, lastFault, faultCount
+HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBH")
 # tcSequence, commandId, stage, errorCode
 ACK_PAYLOAD = struct.Struct(">HBBB")
 # severity, eventId, arg1, arg2
@@ -53,7 +54,16 @@ FLAG_RMC_ACTIVE = 1 << 4
 FIX_TYPE = {1: "NoFix", 2: "2D", 3: "3D"}
 FIX_QUALITY = {0: "NoFix", 1: "GPS", 2: "DGPS", 3: "PPS", 4: "RTK", 5: "FloatRTK", 6: "Estimated"}
 MODE = {0: "SAFE", 1: "NOMINAL", 2: "MISSION"}
-COMMAND = {1: "NO_OP", 2: "SET_MODE", 3: "SET_TM_INTERVAL", 4: "PAYLOAD_POWER", 5: "RESET_COUNTERS", 6: "BEEP"}
+COMMAND = {
+    1: "NO_OP",
+    2: "SET_MODE",
+    3: "SET_TM_INTERVAL",
+    4: "PAYLOAD_POWER",
+    5: "RESET_COUNTERS",
+    6: "BEEP",
+    7: "SET_FDIR",
+}
+FAULT = {0: "NONE", 1: "GNSS_NO_DATA"}
 ACK_STAGE = {1: "ACCEPTED", 2: "REJECTED", 3: "COMPLETED", 4: "FAILED"}
 ERROR_CODE = {
     0: "NONE",
@@ -71,6 +81,8 @@ EVENT_ID = {
     4: "TM_INTERVAL_CHANGED",
     5: "COUNTERS_RESET",
     6: "COMMAND_REJECTED",
+    7: "FAULT_DETECTED",
+    8: "FDIR_CHANGED",
 }
 # ESP-IDF の esp_reset_reason_t
 RESET_REASON = {
@@ -133,12 +145,13 @@ def format_gnss(data):
 
 def format_housekeeping(data):
     (mode, payload, accepted, rejected, last_command, rssi, free_heap, min_free_heap, uptime, boot_count,
-     reset_reason) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
+     reset_reason, fdir, last_fault, fault_count) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
     return (
         f"HK   mode={MODE.get(mode, mode)} payload={'ON' if payload else 'OFF'} "
         f"cmd(ok={accepted} ng={rejected} last={COMMAND.get(last_command, 'NONE')}) rssi={rssi}dBm "
         f"heap={free_heap}(min {min_free_heap}) uptime={uptime / 1000:.1f}s "
-        f"boot={boot_count} reset={RESET_REASON.get(reset_reason, reset_reason)}"
+        f"boot={boot_count} reset={RESET_REASON.get(reset_reason, reset_reason)} "
+        f"fdir={'ON' if fdir else 'OFF'} fault={FAULT.get(last_fault, last_fault)}x{fault_count}"
     )
 
 
@@ -163,6 +176,10 @@ def format_event(data):
         detail = f"{arg1}ms"
     elif name == "COMMAND_REJECTED":
         detail = f"{COMMAND.get(arg1, arg1)} {ERROR_CODE.get(arg2, arg2)}"
+    elif name == "FAULT_DETECTED":
+        detail = f"{FAULT.get(arg1, arg1)} {arg2}s"
+    elif name == "FDIR_CHANGED":
+        detail = "ON" if arg1 else "OFF"
     else:
         detail = f"arg1={arg1} arg2={arg2}"
     return f"EVT  {EVENT_SEVERITY.get(severity, severity)} {name} {detail}"

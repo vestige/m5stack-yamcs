@@ -12,12 +12,15 @@
 class Satellite {
  public:
   using OperationMode = HousekeepingPacket::OperationMode;
+  using Fault = HousekeepingPacket::Fault;
 
   static const uint16_t kMinTmIntervalMs = 200;
   static const uint16_t kMaxTmIntervalMs = 10000;
   static const uint16_t kDefaultTmIntervalMs = 1000;
   static const uint16_t kMinBeepMs = 50;
   static const uint16_t kMaxBeepMs = 2000;
+  // ペイロードの電源がONなのに、この時間GNSSのデータが届かなければ異常とみなす
+  static const uint32_t kGnssTimeoutMs = 10000;
 
   // コマンドを処理した結果
   struct Result {
@@ -32,6 +35,10 @@ class Satellite {
   // TCパケットとして解析できなかったものを拒否として数える
   void reject(uint8_t commandId, Telecommand::ErrorCode error);
 
+  // FDIR: 異常を検知したら、ペイロードを切ってSAFEへ退避する。
+  // lastGnssDataMs: GNSSのデータが最後に届いた時刻 (まだ届いていなければ0)
+  void checkHealth(uint32_t nowMs, uint32_t lastGnssDataMs);
+
   // 地上へ知らせるイベントを溜める / 取り出す
   void report(const EventPacket::Event& event) { events_.push(event); }
   bool popEvent(EventPacket::Event* event) { return events_.pop(event); }
@@ -42,6 +49,9 @@ class Satellite {
   uint16_t acceptedCommands() const { return acceptedCommands_; }
   uint16_t rejectedCommands() const { return rejectedCommands_; }
   uint8_t lastCommandId() const { return lastCommandId_; }
+  bool fdirEnabled() const { return fdirEnabled_; }
+  Fault lastFault() const { return lastFault_; }
+  uint16_t faultCount() const { return faultCount_; }
 
   // HKのうちバスの状態に関する項目を埋める
   void fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const;
@@ -54,6 +64,7 @@ class Satellite {
   void changeMode(OperationMode mode);
   void changePayloadPower(bool on);
   void reportInfo(EventPacket::EventId id, uint16_t arg1 = 0, uint16_t arg2 = 0);
+  void handleFault(Fault fault, uint16_t durationSec);
 
   OperationMode mode_ = OperationMode::Nominal;
   bool payloadPower_ = true;
@@ -61,5 +72,13 @@ class Satellite {
   uint16_t acceptedCommands_ = 0;
   uint16_t rejectedCommands_ = 0;
   uint8_t lastCommandId_ = 0;
+
+  bool fdirEnabled_ = true;
+  Fault lastFault_ = Fault::None;
+  uint16_t faultCount_ = 0;
+  // ペイロードを監視しはじめた時刻。電源を入れてから kGnssTimeoutMs は待つため
+  bool watchingPayload_ = false;
+  uint32_t watchStartMs_ = 0;
+
   EventQueue events_;
 };

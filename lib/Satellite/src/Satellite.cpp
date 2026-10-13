@@ -17,6 +17,7 @@ int argsLengthOf(uint8_t commandId) {
     case CommandId::PayloadPower: return 1;
     case CommandId::ResetCounters: return 0;
     case CommandId::Beep: return 2;
+    case CommandId::SetFdir: return 1;
   }
   return -1;
 }
@@ -69,6 +70,7 @@ ErrorCode Satellite::validate(const Telecommand::Packet& tc) const {
       return ErrorCode::None;
     }
     case CommandId::PayloadPower:
+    case CommandId::SetFdir:
       if (tc.args[0] > 1) return ErrorCode::InvalidArgument;
       return ErrorCode::None;
     case CommandId::Beep: {
@@ -109,7 +111,51 @@ void Satellite::execute(const Telecommand::Packet& tc, Result* result) {
     case CommandId::Beep:
       result->beepMs = readU16(tc.args);
       break;
+    case CommandId::SetFdir: {
+      bool enabled = tc.args[0] == 1;
+      if (enabled == fdirEnabled_) break;
+      fdirEnabled_ = enabled;
+      // 有効にした時点から、改めて猶予を置いて監視する
+      watchingPayload_ = false;
+      reportInfo(EventId::FdirChanged, enabled ? 1 : 0);
+      break;
+    }
   }
+}
+
+void Satellite::checkHealth(uint32_t nowMs, uint32_t lastGnssDataMs) {
+  if (!payloadPower_) {
+    watchingPayload_ = false;
+    return;
+  }
+  if (!watchingPayload_) {
+    watchingPayload_ = true;
+    watchStartMs_ = nowMs;
+  }
+  if (!fdirEnabled_) return;
+
+  // 監視を始めてから届いたデータだけを数える
+  bool receivedSinceWatch =
+      lastGnssDataMs != 0 && static_cast<int32_t>(lastGnssDataMs - watchStartMs_) >= 0;
+  uint32_t lastAlive = receivedSinceWatch ? lastGnssDataMs : watchStartMs_;
+  uint32_t silentMs = nowMs - lastAlive;
+  if (silentMs >= kGnssTimeoutMs) handleFault(Fault::GnssNoData, static_cast<uint16_t>(silentMs / 1000));
+}
+
+void Satellite::handleFault(Fault fault, uint16_t durationSec) {
+  lastFault_ = fault;
+  faultCount_++;
+  EventPacket::Event event;
+  event.severity = EventPacket::Severity::Distress;
+  event.id = EventId::FaultDetected;
+  event.arg1 = static_cast<uint16_t>(fault);
+  event.arg2 = durationSec;
+  report(event);
+
+  // 分離: ペイロードを切る / 退避: SAFE へ
+  changePayloadPower(false);
+  changeMode(OperationMode::Safe);
+  watchingPayload_ = false;
 }
 
 void Satellite::changeMode(OperationMode mode) {
@@ -139,6 +185,9 @@ void Satellite::fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const {
   hk->acceptedCommands = acceptedCommands_;
   hk->rejectedCommands = rejectedCommands_;
   hk->lastCommandId = lastCommandId_;
+  hk->fdirEnabled = fdirEnabled_;
+  hk->lastFault = lastFault_;
+  hk->faultCount = faultCount_;
 }
 
 const char* Satellite::modeName(OperationMode mode) {

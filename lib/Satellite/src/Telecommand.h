@@ -21,6 +21,7 @@ enum class CommandId : uint8_t {
   PayloadPower = 4,
   ResetCounters = 5,
   Beep = 6,
+  SetFdir = 7,
 };
 
 // コマンドを拒否・失敗した理由 (ACKで地上へ返す)

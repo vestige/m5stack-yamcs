@@ -19,13 +19,13 @@ void test_primary_header() {
   HousekeepingPacket::Housekeeping hk;
   uint8_t buf[HousekeepingPacket::kPacketSize];
   size_t n = HousekeepingPacket::encode(hk, 7, buf, sizeof(buf));
-  TEST_ASSERT_EQUAL(29, n);
+  TEST_ASSERT_EQUAL(33, n);
 
   // version=0, type=TM, secondary header=0, APID=101
   TEST_ASSERT_EQUAL_HEX16(0x0065, readU16(buf));
   TEST_ASSERT_EQUAL_HEX16(0xC007, readU16(buf + 2));
-  // データ部23バイト → length=22
-  TEST_ASSERT_EQUAL_UINT16(22, readU16(buf + 4));
+  // データ部27バイト → length=26
+  TEST_ASSERT_EQUAL_UINT16(26, readU16(buf + 4));
 }
 
 void test_payload() {
@@ -41,6 +41,9 @@ void test_payload() {
   hk.uptimeMs = 123456;
   hk.bootCount = 42;
   hk.resetReason = 3;  // ESP_RST_SW
+  hk.fdirEnabled = false;
+  hk.lastFault = HousekeepingPacket::Fault::GnssNoData;
+  hk.faultCount = 513;
 
   uint8_t buf[HousekeepingPacket::kPacketSize];
   HousekeepingPacket::encode(hk, 0, buf, sizeof(buf));
@@ -56,6 +59,9 @@ void test_payload() {
   TEST_ASSERT_EQUAL_UINT32(123456, readU32(buf + 22));
   TEST_ASSERT_EQUAL_UINT16(42, readU16(buf + 26));
   TEST_ASSERT_EQUAL_UINT8(3, buf[28]);
+  TEST_ASSERT_EQUAL_UINT8(0, buf[29]);
+  TEST_ASSERT_EQUAL_UINT8(1, buf[30]);
+  TEST_ASSERT_EQUAL_UINT16(513, readU16(buf + 31));
 }
 
 void test_defaults() {
@@ -65,6 +71,8 @@ void test_defaults() {
   HousekeepingPacket::encode(hk, 0, buf, sizeof(buf));
   TEST_ASSERT_EQUAL_UINT8(1, buf[6]);
   TEST_ASSERT_EQUAL_UINT8(1, buf[7]);
+  TEST_ASSERT_EQUAL_UINT8(1, buf[29]);  // FDIRは起動時に有効
+  TEST_ASSERT_EQUAL_UINT8(0, buf[30]);  // 異常なし
 }
 
 void test_buffer_too_small() {
