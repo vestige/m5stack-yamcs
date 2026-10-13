@@ -305,6 +305,129 @@ void test_event_packet() {
   TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, buf, sizeof(expected));
 }
 
+// --- FDIR ---
+
+namespace {
+
+const uint32_t kTimeout = Satellite::kGnssTimeoutMs;
+
+}  // namespace
+
+void test_fdir_waits_grace_period_after_payload_on() {
+  Satellite sat;
+  sat.checkHealth(1000, 0);              // 監視開始 (まだデータなし)
+  sat.checkHealth(1000 + kTimeout - 1, 0);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);
+  TEST_ASSERT_TRUE(sat.payloadPower());
+}
+
+void test_fdir_no_fault_while_data_arrives() {
+  Satellite sat;
+  sat.checkHealth(1000, 0);
+  for (uint32_t t = 2000; t < 60000; t += 1000) sat.checkHealth(t, t - 500);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);
+  TEST_ASSERT_TRUE(sat.lastFault() == Satellite::Fault::None);
+}
+
+void test_fdir_detects_gnss_timeout_and_goes_safe() {
+  Satellite sat;
+  sat.checkHealth(1000, 0);
+  sat.checkHealth(5000, 4000);                 // データが届いている
+  drainEvents(sat);
+  sat.checkHealth(4000 + kTimeout - 1, 4000);  // まだ待つ
+  TEST_ASSERT_TRUE(sat.payloadPower());
+  sat.checkHealth(4000 + kTimeout, 4000);      // 10秒届かない → 異常
+
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Safe);
+  TEST_ASSERT_FALSE(sat.payloadPower());
+  TEST_ASSERT_TRUE(sat.lastFault() == Satellite::Fault::GnssNoData);
+  TEST_ASSERT_EQUAL_UINT16(1, sat.faultCount());
+
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_EQUAL(3, events.size());
+  TEST_ASSERT_TRUE(events[0].id == EventId::FaultDetected);
+  TEST_ASSERT_TRUE(events[0].severity == Severity::Distress);
+  TEST_ASSERT_EQUAL_UINT16(1, events[0].arg1);   // GNSS_NO_DATA
+  TEST_ASSERT_EQUAL_UINT16(10, events[0].arg2);  // 10秒
+  TEST_ASSERT_TRUE(events[1].id == EventId::PayloadPowerChanged);
+  TEST_ASSERT_TRUE(events[2].id == EventId::ModeChanged);
+  TEST_ASSERT_EQUAL_UINT16(0, events[2].arg2);   // SAFE
+}
+
+void test_fdir_old_data_does_not_count_after_power_on() {
+  Satellite sat;
+  sat.checkHealth(1000, 0);
+  sat.checkHealth(1000 + kTimeout, 0);  // 異常 → ペイロードOFF
+  TEST_ASSERT_FALSE(sat.payloadPower());
+
+  // ケーブルを抜いたまま電源を入れ直す: 電源を入れる前の古いデータは数えない
+  send(sat, CommandId::PayloadPower, {1});
+  uint32_t on = 50000;
+  sat.checkHealth(on, 900);
+  sat.checkHealth(on + kTimeout - 1, 900);
+  TEST_ASSERT_TRUE(sat.payloadPower());
+  sat.checkHealth(on + kTimeout, 900);
+  TEST_ASSERT_FALSE(sat.payloadPower());
+  TEST_ASSERT_EQUAL_UINT16(2, sat.faultCount());
+}
+
+void test_fdir_does_nothing_while_payload_off() {
+  Satellite sat;
+  send(sat, CommandId::PayloadPower, {0});
+  sat.checkHealth(1000, 0);
+  sat.checkHealth(1000 + kTimeout * 3, 0);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);
+  TEST_ASSERT_EQUAL_UINT16(0, sat.faultCount());
+}
+
+void test_fdir_disabled_does_not_go_safe() {
+  Satellite sat;
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetFdir, {0}).accepted);
+  TEST_ASSERT_FALSE(sat.fdirEnabled());
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_EQUAL(1, events.size());
+  TEST_ASSERT_TRUE(events[0].id == EventId::FdirChanged);
+  TEST_ASSERT_EQUAL_UINT16(0, events[0].arg1);
+
+  sat.checkHealth(1000, 0);
+  sat.checkHealth(1000 + kTimeout * 3, 0);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);
+  TEST_ASSERT_TRUE(sat.payloadPower());
+}
+
+void test_fdir_reenabled_restarts_grace_period() {
+  Satellite sat;
+  send(sat, CommandId::SetFdir, {0});
+  sat.checkHealth(1000, 0);
+  sat.checkHealth(30000, 0);
+  send(sat, CommandId::SetFdir, {1});
+  sat.checkHealth(30001, 0);               // 有効にした時点から監視し直す
+  sat.checkHealth(30001 + kTimeout - 1, 0);
+  TEST_ASSERT_TRUE(sat.payloadPower());
+  sat.checkHealth(30001 + kTimeout, 0);
+  TEST_ASSERT_FALSE(sat.payloadPower());
+}
+
+void test_set_fdir_argument_range() {
+  Satellite sat;
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetFdir, {2}).error == ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetFdir, {1}).accepted);  // すでに有効: 何も起きない
+  sat.reject(0, ErrorCode::None);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_EQUAL(2, events.size());  // 拒否2つ (FDIR_CHANGED は出ない)
+}
+
+void test_fill_housekeeping_fdir() {
+  Satellite sat;
+  sat.checkHealth(1000, 0);
+  sat.checkHealth(1000 + kTimeout, 0);
+  HousekeepingPacket::Housekeeping hk;
+  sat.fillHousekeeping(&hk);
+  TEST_ASSERT_TRUE(hk.fdirEnabled);
+  TEST_ASSERT_TRUE(hk.lastFault == Satellite::Fault::GnssNoData);
+  TEST_ASSERT_EQUAL_UINT16(1, hk.faultCount);
+}
+
 // --- ACKパケット ---
 
 void test_ack_packet() {
@@ -339,6 +462,15 @@ int main(int, char**) {
   RUN_TEST(test_rejected_command_reports_warning_with_reason);
   RUN_TEST(test_event_queue_drops_oldest_when_full);
   RUN_TEST(test_event_packet);
+  RUN_TEST(test_fdir_waits_grace_period_after_payload_on);
+  RUN_TEST(test_fdir_no_fault_while_data_arrives);
+  RUN_TEST(test_fdir_detects_gnss_timeout_and_goes_safe);
+  RUN_TEST(test_fdir_old_data_does_not_count_after_power_on);
+  RUN_TEST(test_fdir_does_nothing_while_payload_off);
+  RUN_TEST(test_fdir_disabled_does_not_go_safe);
+  RUN_TEST(test_fdir_reenabled_restarts_grace_period);
+  RUN_TEST(test_set_fdir_argument_range);
+  RUN_TEST(test_fill_housekeeping_fdir);
   RUN_TEST(test_ack_packet);
   return UNITY_END();
 }

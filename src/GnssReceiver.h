@@ -12,6 +12,8 @@ class GnssReceiver {
 
   const NmeaParser& parser() const { return parser_; }
   bool receiving(uint32_t now) const;
+  // NMEAが最後に届いた時刻 (まだ届いていなければ0)
+  uint32_t lastSentenceMs() const { return lastSentenceMs_; }
   void printTelemetry() const;
 
  private:

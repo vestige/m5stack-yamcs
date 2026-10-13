@@ -418,7 +418,7 @@ YAMCS: WARNING  M5Sat  COMMAND_REJECTED  コマンド SET_TM_INTERVAL を拒否�
 
 **運用シナリオ**：運用者はEventsを開いたまま、5-2のコマンドを順に送る。M5Stackを再起動すると `BOOT` が届き、`SET_MODE SAFE` ではモードの変更とペイロードの電源OFFの2つのイベントが届く。範囲外の `SET_TM_INTERVAL` を送ると、拒否の理由つきのイベントがWarningとして表示されることを確かめる。
 
-#### 5-4 運用モードと異常時の自動退避（FDIR）
+#### 5-4 運用モードと異常時の自動退避（FDIR） ✅
 
 衛星側で運用モードを管理します。
 
@@ -428,9 +428,42 @@ YAMCS: WARNING  M5Sat  COMMAND_REJECTED  コマンド SET_TM_INTERVAL を拒否�
 | NOMINAL | 通常運用。HKとGNSSテレメトリを送る |
 | MISSION | ペイロードで観測し、観測データを送る |
 
-異常を検知したら、衛星が自分でSAFEモードへ移る仕組み（FDIR: Fault Detection, Isolation and Recovery）を入れます。たとえば、GNSSのデータが一定時間届かなければペイロード異常とみなします。
+異常を検知したら、衛星が自分でSAFEモードへ移ります（FDIR: Fault Detection, Isolation and Recovery）。
 
-**運用シナリオ**：NOMINALで運用中にGPSユニットのケーブルを抜く。衛星は自分でSAFEへ移り、地上ではアラームとイベントが上がる。運用者はAlarmsでアラームを確認（Acknowledge）し、ケーブルを戻してから `SET_MODE NOMINAL` で復旧させる。
+| 段階 | 衛星がすること |
+| --- | --- |
+| 検知（Detection） | ペイロードの電源がONなのに、GNSSのデータが **10秒** 届かない → ペイロードの異常とみなす |
+| 分離（Isolation） | ペイロードの電源を切る（LEDも消える） |
+| 退避（Recovery） | 運用モードを SAFE にする。`FAULT_DETECTED` のイベント（DISTRESS）で地上へ知らせる |
+
+- ペイロードの電源を入れてから10秒は、GPSユニットが動き出すのを待ちます。電源を入れる前に届いていた古いデータは数えません
+- SAFEのままでも、ペイロードの電源を入れればまた監視します。原因が直っていなければ、もう一度ペイロードを切ります
+- **復旧は地上からのコマンドで行います**。衛星は自分では NOMINAL に戻りません
+
+FDIRは、地上からのコマンドで有効・無効にできます（起動時は有効）。試験のときや、5-10の異常対応の訓練で使います。
+
+| ID | コマンド | 引数 | 内容 |
+| --- | --- | --- | --- |
+| 7 | `SET_FDIR` | `State`（ON / OFF） | FDIRを有効・無効にする。`FDIR_CHANGED` のイベントが届く |
+
+HKには、FDIRの状態を表す項目を追加しました（HKのパケットは33バイトになりました）。
+
+| Offset | Size | 型 | パラメータ | 内容 |
+| --- | --- | --- | --- | --- |
+| 29 | 1 | uint8 | `FdirEnabled` | FDIRが有効か（0=OFF, 1=ON） |
+| 30 | 1 | uint8 | `LastFault` | 最後に検知した異常（0=NONE, 1=GNSS_NO_DATA） |
+| 31 | 2 | uint16 | `FaultCount` | これまでに検知した異常の回数 |
+
+YAMCSでは、`/M5Sat/Bus/Mode` が SAFE になると **Warning のアラーム**が上がります。
+
+**復旧の手順**
+
+1. Alarms でアラームを確認（Acknowledge）し、Events の `FAULT_DETECTED` で何が起きたかを確かめる
+2. 原因を直す（今回はGPSユニットのケーブルを戻す）
+3. `PAYLOAD_POWER ON` を送り、`/M5Sat/GNSS/...` のデータが届き始めたことを確かめる
+4. `SET_MODE NOMINAL` を送る
+
+**運用シナリオ**：NOMINALで運用中にGPSユニットのケーブルを抜く。10秒後に衛星は自分でペイロードを切ってSAFEへ移り、地上ではアラームとイベントが上がる。運用者はAlarmsでアラームを確認（Acknowledge）し、ケーブルを戻してから上の手順で復旧させる。ケーブルを抜いたまま `PAYLOAD_POWER ON` を送ると、10秒後にまたペイロードが切られることも確かめる。
 
 #### 5-5 コマンドの安全装置
 

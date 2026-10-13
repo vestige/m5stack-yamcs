@@ -27,6 +27,8 @@ enum class EventId : uint8_t {
   TmIntervalChanged = 4,    // arg1: 周期 (ms)
   CountersReset = 5,
   CommandRejected = 6,      // arg1: コマンドID, arg2: エラーコード
+  FaultDetected = 7,        // arg1: 異常 (HousekeepingPacket::Fault), arg2: 異常が続いた秒数
+  FdirChanged = 8,          // arg1: 0=OFF, 1=ON
 };
 
 struct Event {
