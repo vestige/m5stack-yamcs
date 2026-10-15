@@ -2,6 +2,8 @@
 
 YAMCS 5.13 の Web UI（http://localhost:8090）で、インスタンスを開いたときの左メニューの一覧です。各メニューが何をする所か、衛星運用ではどんな役割を持つかをまとめています。
 
+実際の操作の手順は [scenarios.md](scenarios.md)、本物の衛星運用との対応は [real-operations.md](real-operations.md) を見てください。
+
 表示されるメニューは、インスタンスの設定やユーザーの権限によって変わります。たとえば Timeline は `TimelineService` を、File transfer はCFDPのサービスを設定したときだけ表示されます。
 
 | メニュー | サブメニュー | 何をする所か | 衛星運用での役割 |
