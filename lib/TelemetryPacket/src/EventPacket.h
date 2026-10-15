@@ -29,6 +29,11 @@ enum class EventId : uint8_t {
   CommandRejected = 6,      // arg1: コマンドID, arg2: エラーコード
   FaultDetected = 7,        // arg1: 異常 (HousekeepingPacket::Fault), arg2: 異常が続いた秒数
   FdirChanged = 8,          // arg1: 0=OFF, 1=ON
+  ObservationScheduled = 9,   // arg1: 開始までの秒数 (65535で頭打ち), arg2: 観測の長さ (秒)
+  ObservationStarted = 10,    // arg1: 観測の長さ (秒)
+  ObservationEnded = 11,      // arg1: 0=完了, 1=中断
+  ObservationSkipped = 12,    // arg1: 1=ペイロードがOFF, 2=NOMINALでない (arg2: そのときのモード)
+  ObservationCancelled = 13,  // arg1: 0=予約を取り消した, 1=観測中に取り消した
 };
 
 struct Event {

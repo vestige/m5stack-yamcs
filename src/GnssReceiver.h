@@ -15,6 +15,8 @@ class GnssReceiver {
   bool receiving(uint32_t now) const;
   // NMEAが最後に届いた時刻 (まだ届いていなければ0)
   uint32_t lastSentenceMs() const { return lastSentenceMs_; }
+  // GPSから新しいUTC時刻 (Unix秒) が届いていれば true を返し、utcSec に入れる。届いた時刻ごとに1回だけ
+  bool takeNewUtc(uint32_t* utcSec);
   void printTelemetry() const;
 
  private:
@@ -24,4 +26,5 @@ class GnssReceiver {
   NmeaParser parser_;
   uint32_t lastSentenceMs_ = 0;
   bool powered_ = true;
+  uint32_t lastUtc_ = 0;
 };

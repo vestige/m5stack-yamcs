@@ -1,5 +1,6 @@
 #include <AckPacket.h>
 #include <EventPacket.h>
+#include <ObservationPacket.h>
 #include <Satellite.h>
 #include <Telecommand.h>
 #include <unity.h>
@@ -442,6 +443,191 @@ void test_fill_housekeeping_fdir() {
   TEST_ASSERT_EQUAL_UINT16(1, hk.faultCount);
 }
 
+// --- 機上時刻と観測 ---
+
+namespace {
+
+const uint32_t kUtc = 1791166425;  // 2026-10-05T02:13:45Z
+
+std::vector<uint8_t> scheduleArgs(uint32_t start, uint16_t duration) {
+  return {static_cast<uint8_t>(start >> 24), static_cast<uint8_t>(start >> 16), static_cast<uint8_t>(start >> 8),
+          static_cast<uint8_t>(start), static_cast<uint8_t>(duration >> 8), static_cast<uint8_t>(duration)};
+}
+
+// 機上時刻を kUtc に合わせ (nowMs=1000)、ペイロードのデータが届いている状態にする
+Satellite syncedSatellite() {
+  Satellite sat;
+  sat.syncTime(kUtc, 1000);
+  sat.checkHealth(1000, 1000);
+  sat.updateObservation(1000);
+  return sat;
+}
+
+// nowMs まで時間を進める (GNSSのデータは届き続ける)
+void advance(Satellite& sat, uint32_t nowMs) {
+  sat.checkHealth(nowMs, nowMs);
+  sat.updateObservation(nowMs);
+}
+
+}  // namespace
+
+void test_onboard_clock() {
+  OnboardClock clock;
+  TEST_ASSERT_FALSE(clock.valid());
+  TEST_ASSERT_EQUAL_UINT32(0, clock.now(5000));
+  clock.sync(kUtc, 2000);
+  TEST_ASSERT_EQUAL_UINT32(kUtc, clock.now(2000));
+  TEST_ASSERT_EQUAL_UINT32(kUtc + 61, clock.now(63500));  // GPSの時刻が来なくても数え続ける
+}
+
+void test_schedule_requires_onboard_time() {
+  Satellite sat;
+  Satellite::Result r = send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 60, 60));
+  TEST_ASSERT_TRUE(r.error == ErrorCode::NotAllowed);
+}
+
+void test_schedule_argument_checks() {
+  Satellite sat = syncedSatellite();
+  TEST_ASSERT_TRUE(send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc, 60)).error ==
+                   ErrorCode::InvalidArgument);  // 過去 (今と同じ) の時刻
+  TEST_ASSERT_TRUE(send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 60, 9)).error ==
+                   ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 60, 3601)).error ==
+                   ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::ScheduleObservation, {0, 0, 0}).error == ErrorCode::InvalidLength);
+  TEST_ASSERT_TRUE(send(sat, CommandId::CancelObservation).error == ErrorCode::NotAllowed);  // 予約がない
+}
+
+void test_observation_runs_on_schedule() {
+  Satellite sat = syncedSatellite();
+  drainEvents(sat);
+  TEST_ASSERT_TRUE(send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 300, 180)).accepted);
+  TEST_ASSERT_TRUE(sat.observationState() == Satellite::ObservationState::Scheduled);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events[0].id == EventId::ObservationScheduled);
+  TEST_ASSERT_EQUAL_UINT16(300, events[0].arg1);
+  TEST_ASSERT_EQUAL_UINT16(180, events[0].arg2);
+
+  advance(sat, 1000 + 299000);  // 開始の1秒前
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);
+  advance(sat, 1000 + 300000);  // 開始
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Mission);
+  TEST_ASSERT_TRUE(sat.observationState() == Satellite::ObservationState::Active);
+  events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events[0].id == EventId::ModeChanged);
+  TEST_ASSERT_TRUE(events[1].id == EventId::ObservationStarted);
+
+  advance(sat, 1000 + 479000);  // 終了の1秒前
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Mission);
+  advance(sat, 1000 + 480000);  // 終了
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);
+  TEST_ASSERT_TRUE(sat.observationState() == Satellite::ObservationState::None);
+  events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events[1].id == EventId::ObservationEnded);
+  TEST_ASSERT_EQUAL_UINT16(0, events[1].arg1);  // 完了
+}
+
+void test_observation_skipped_when_payload_off() {
+  Satellite sat = syncedSatellite();
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 60, 60));
+  send(sat, CommandId::PayloadPower, {0});
+  drainEvents(sat);
+  sat.updateObservation(1000 + 60000);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);
+  TEST_ASSERT_TRUE(sat.observationState() == Satellite::ObservationState::None);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events[0].id == EventId::ObservationSkipped);
+  TEST_ASSERT_TRUE(events[0].severity == Severity::Warning);
+  TEST_ASSERT_EQUAL_UINT16(Satellite::kSkippedPayloadOff, events[0].arg1);
+}
+
+void test_observation_interrupted_by_fdir() {
+  Satellite sat = syncedSatellite();
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 10, 600));
+  advance(sat, 1000 + 10000);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Mission);
+  drainEvents(sat);
+
+  // GNSSのデータが止まる → FDIR が SAFE へ退避 → 観測は中断
+  sat.checkHealth(1000 + 10000 + Satellite::kGnssTimeoutMs, 1000 + 10000);
+  sat.updateObservation(1000 + 10000 + Satellite::kGnssTimeoutMs);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Safe);
+  TEST_ASSERT_TRUE(sat.observationState() == Satellite::ObservationState::None);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events.back().id == EventId::ObservationEnded);
+  TEST_ASSERT_EQUAL_UINT16(1, events.back().arg1);  // 中断
+}
+
+void test_cancel_observation() {
+  Satellite sat = syncedSatellite();
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 60, 60));
+  TEST_ASSERT_TRUE(send(sat, CommandId::CancelObservation).accepted);
+  advance(sat, 1000 + 61000);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);  // 取り消したので観測しない
+
+  // 観測中に取り消すと NOMINAL に戻る
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 120, 60));
+  advance(sat, 1000 + 120000);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Mission);
+  TEST_ASSERT_TRUE(send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 500, 60)).error ==
+                   ErrorCode::NotAllowed);  // 観測中は予約し直せない
+  drainEvents(sat);
+  TEST_ASSERT_TRUE(send(sat, CommandId::CancelObservation).accepted);
+  TEST_ASSERT_TRUE(sat.mode() == OperationMode::Nominal);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events.back().id == EventId::ObservationCancelled);
+  TEST_ASSERT_EQUAL_UINT16(1, events.back().arg1);
+}
+
+void test_fill_housekeeping_observation() {
+  Satellite sat = syncedSatellite();
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 300, 180));
+  sat.updateObservation(6000);
+  HousekeepingPacket::Housekeeping hk;
+  sat.fillHousekeeping(&hk);
+  TEST_ASSERT_EQUAL_UINT32(kUtc + 5, hk.onboardTime);
+  TEST_ASSERT_TRUE(hk.observationState == Satellite::ObservationState::Scheduled);
+  TEST_ASSERT_EQUAL_UINT32(kUtc + 300, hk.observationStart);
+  TEST_ASSERT_EQUAL_UINT16(180, hk.observationDuration);
+}
+
+void test_observation_packet() {
+  SatelliteInfo sats[3];
+  sats[0].system = GnssSystem::QZSS;
+  sats[0].prn = 2;
+  sats[0].elevation = 80;
+  sats[0].azimuth = 180;
+  sats[0].snr = 45;
+  sats[1].system = GnssSystem::GPS;
+  sats[1].prn = 5;
+  sats[1].elevation = 30;
+  sats[1].azimuth = 270;
+  sats[1].snr = 36;
+  sats[2].system = GnssSystem::GPS;
+  sats[2].prn = 7;  // 仰角・方位角は不明、信号なし
+
+  uint8_t buf[ObservationPacket::kMaxPacketSize];
+  size_t n = ObservationPacket::encode(kUtc, sats, 3, 4, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL(19 + 18, n);
+  TEST_ASSERT_EQUAL_HEX8(0x68, buf[1]);  // APID 104
+  TEST_ASSERT_EQUAL_UINT8(3, buf[10]);   // 見えている数
+  TEST_ASSERT_EQUAL_UINT8(2, buf[11]);   // 捕捉している数
+  TEST_ASSERT_EQUAL_UINT8(45, buf[12]);  // 最大
+  TEST_ASSERT_EQUAL_UINT8(41, buf[13]);  // 平均 (45+36)/2=40.5 → 41
+  const uint8_t perSystem[] = {1, 0, 0, 0, 1};
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(perSystem, buf + 14, 5);
+  const uint8_t last[] = {0, 7, 0xFF, 0xFF, 0xFF, 0};  // GPS, PRN7, 仰角-1, 方位角不明, C/N0 0
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(last, buf + 19 + 12, 6);
+}
+
+void test_observation_packet_limits_satellites() {
+  SatelliteInfo sats[40];
+  uint8_t buf[ObservationPacket::kMaxPacketSize];
+  TEST_ASSERT_EQUAL(ObservationPacket::kMaxPacketSize, ObservationPacket::encode(kUtc, sats, 40, 0, buf, sizeof(buf)));
+  TEST_ASSERT_EQUAL_UINT8(32, buf[10]);
+  TEST_ASSERT_EQUAL(0, ObservationPacket::encode(kUtc, sats, 40, 0, buf, sizeof(buf) - 1));
+}
+
 // --- ACKパケット ---
 
 void test_ack_packet() {
@@ -486,6 +672,16 @@ int main(int, char**) {
   RUN_TEST(test_fdir_reenabled_restarts_grace_period);
   RUN_TEST(test_set_fdir_argument_range);
   RUN_TEST(test_fill_housekeeping_fdir);
+  RUN_TEST(test_onboard_clock);
+  RUN_TEST(test_schedule_requires_onboard_time);
+  RUN_TEST(test_schedule_argument_checks);
+  RUN_TEST(test_observation_runs_on_schedule);
+  RUN_TEST(test_observation_skipped_when_payload_off);
+  RUN_TEST(test_observation_interrupted_by_fdir);
+  RUN_TEST(test_cancel_observation);
+  RUN_TEST(test_fill_housekeeping_observation);
+  RUN_TEST(test_observation_packet);
+  RUN_TEST(test_observation_packet_limits_satellites);
   RUN_TEST(test_ack_packet);
   return UNITY_END();
 }

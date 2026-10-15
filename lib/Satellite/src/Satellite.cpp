@@ -7,6 +7,10 @@ using Telecommand::CommandId;
 using Telecommand::ErrorCode;
 
 uint16_t readU16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
+uint32_t readU32(const uint8_t* p) {
+  return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
+         (static_cast<uint32_t>(p[2]) << 8) | p[3];
+}
 
 // コマンドごとの引数のバイト数。知らないコマンドは -1
 int argsLengthOf(uint8_t commandId) {
@@ -18,6 +22,8 @@ int argsLengthOf(uint8_t commandId) {
     case CommandId::ResetCounters: return 0;
     case CommandId::Beep: return 2;
     case CommandId::SetFdir: return 1;
+    case CommandId::ScheduleObservation: return 6;
+    case CommandId::CancelObservation: return 0;
   }
   return -1;
 }
@@ -78,6 +84,20 @@ ErrorCode Satellite::validate(const Telecommand::Packet& tc) const {
       if (duration < kMinBeepMs || duration > kMaxBeepMs) return ErrorCode::InvalidArgument;
       return ErrorCode::None;
     }
+    case CommandId::ScheduleObservation: {
+      uint32_t start = readU32(tc.args);
+      uint16_t duration = readU16(tc.args + 4);
+      if (duration < kMinObservationSec || duration > kMaxObservationSec) return ErrorCode::InvalidArgument;
+      // 機上時刻がわからなければ、時刻指定のコマンドは実行できない
+      if (!clock_.valid()) return ErrorCode::NotAllowed;
+      // 観測中は予約し直せない (先に取り消す)
+      if (observationState_ == ObservationState::Active) return ErrorCode::NotAllowed;
+      if (start <= clock_.now(nowMs_)) return ErrorCode::InvalidArgument;
+      return ErrorCode::None;
+    }
+    case CommandId::CancelObservation:
+      if (observationState_ == ObservationState::None) return ErrorCode::NotAllowed;
+      return ErrorCode::None;
     default:
       return ErrorCode::None;
   }
@@ -120,10 +140,77 @@ void Satellite::execute(const Telecommand::Packet& tc, Result* result) {
       reportInfo(EventId::FdirChanged, enabled ? 1 : 0);
       break;
     }
+    case CommandId::ScheduleObservation: {
+      observationStart_ = readU32(tc.args);
+      observationDuration_ = readU16(tc.args + 4);
+      observationState_ = ObservationState::Scheduled;
+      uint32_t untilStart = observationStart_ - clock_.now(nowMs_);
+      reportInfo(EventId::ObservationScheduled, untilStart > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(untilStart),
+                 observationDuration_);
+      break;
+    }
+    case CommandId::CancelObservation: {
+      bool wasActive = observationState_ == ObservationState::Active;
+      observationState_ = ObservationState::None;
+      if (wasActive && mode_ == OperationMode::Mission) changeMode(OperationMode::Nominal);
+      reportInfo(EventId::ObservationCancelled, wasActive ? 1 : 0);
+      break;
+    }
   }
 }
 
+void Satellite::updateObservation(uint32_t nowMs) {
+  nowMs_ = nowMs;
+  if (observationState_ == ObservationState::None || !clock_.valid()) return;
+  uint32_t now = clock_.now(nowMs);
+
+  if (observationState_ == ObservationState::Scheduled) {
+    if (now < observationStart_) return;
+    if (!payloadPower_) {
+      observationState_ = ObservationState::None;
+      EventPacket::Event event;
+      event.severity = EventPacket::Severity::Warning;
+      event.id = EventId::ObservationSkipped;
+      event.arg1 = kSkippedPayloadOff;
+      report(event);
+      return;
+    }
+    if (mode_ != OperationMode::Nominal) {
+      observationState_ = ObservationState::None;
+      EventPacket::Event event;
+      event.severity = EventPacket::Severity::Warning;
+      event.id = EventId::ObservationSkipped;
+      event.arg1 = kSkippedNotNominal;
+      event.arg2 = static_cast<uint16_t>(mode_);
+      report(event);
+      return;
+    }
+    observationState_ = ObservationState::Active;
+    changeMode(OperationMode::Mission);
+    reportInfo(EventId::ObservationStarted, observationDuration_);
+    return;
+  }
+
+  // 観測中: MISSIONでなくなったら中断、長さが過ぎたら完了
+  if (mode_ != OperationMode::Mission) {
+    endObservation(false);
+  } else if (now >= observationStart_ + observationDuration_) {
+    changeMode(OperationMode::Nominal);
+    endObservation(true);
+  }
+}
+
+void Satellite::endObservation(bool completed) {
+  observationState_ = ObservationState::None;
+  EventPacket::Event event;
+  event.severity = completed ? EventPacket::Severity::Info : EventPacket::Severity::Warning;
+  event.id = EventId::ObservationEnded;
+  event.arg1 = completed ? 0 : 1;
+  report(event);
+}
+
 void Satellite::checkHealth(uint32_t nowMs, uint32_t lastGnssDataMs) {
+  nowMs_ = nowMs;
   if (!payloadPower_) {
     watchingPayload_ = false;
     return;
@@ -189,6 +276,10 @@ void Satellite::fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const {
   hk->fdirEnabled = fdirEnabled_;
   hk->lastFault = lastFault_;
   hk->faultCount = faultCount_;
+  hk->onboardTime = clock_.now(nowMs_);
+  hk->observationState = observationState_;
+  hk->observationStart = observationState_ == ObservationState::None ? 0 : observationStart_;
+  hk->observationDuration = observationState_ == ObservationState::None ? 0 : observationDuration_;
 }
 
 const char* Satellite::modeName(OperationMode mode) {

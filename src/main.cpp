@@ -55,6 +55,9 @@ IntervalTimer displayTimer;
 
 void sendTelemetry() {
   if (satellite.payloadPower()) groundLink.sendGnss(gnss.parser());
+  if (satellite.payloadPower() && satellite.mode() == Satellite::OperationMode::Mission) {
+    groundLink.sendObservation(satellite.clock().now(millis()), gnss.parser());
+  }
   groundLink.sendHousekeeping(bus.collect(satellite, groundLink));
 }
 
@@ -125,7 +128,10 @@ void setup() {
 void loop() {
   gnss.poll(satellite.payloadPower());
   commands.poll();
+  uint32_t utc;
+  if (gnss.takeNewUtc(&utc)) satellite.syncTime(utc, millis());
   satellite.checkHealth(millis(), gnss.lastSentenceMs());
+  satellite.updateObservation(millis());
   sendEvents();
   payloadLed.show(satellite.payloadPower());
 
