@@ -138,8 +138,9 @@ void Satellite::checkHealth(uint32_t nowMs, uint32_t lastGnssDataMs) {
   bool receivedSinceWatch =
       lastGnssDataMs != 0 && static_cast<int32_t>(lastGnssDataMs - watchStartMs_) >= 0;
   uint32_t lastAlive = receivedSinceWatch ? lastGnssDataMs : watchStartMs_;
+  uint32_t timeoutMs = receivedSinceWatch ? kGnssTimeoutMs : kGnssStartupTimeoutMs;
   uint32_t silentMs = nowMs - lastAlive;
-  if (silentMs >= kGnssTimeoutMs) handleFault(Fault::GnssNoData, static_cast<uint16_t>(silentMs / 1000));
+  if (silentMs >= timeoutMs) handleFault(Fault::GnssNoData, static_cast<uint16_t>(silentMs / 1000));
 }
 
 void Satellite::handleFault(Fault fault, uint16_t durationSec) {

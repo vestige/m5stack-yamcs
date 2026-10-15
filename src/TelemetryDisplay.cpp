@@ -155,7 +155,21 @@ void TelemetryDisplay::drawTelemetryPage(const NmeaParser& parser) {
   canvas_.drawString(text, kWidth - 4, kHeight - 3);
 }
 
+// ペイロードの電源が切れているときは、衛星の情報の代わりにその旨を出す
+bool TelemetryDisplay::drawPayloadOffNotice() {
+  if (payloadPower_) return false;
+  canvas_.setFont(&fonts::Font4);
+  canvas_.setTextSize(1);
+  canvas_.setTextColor(kInvalidColor);
+  canvas_.setTextDatum(middle_center);
+  canvas_.drawString("PAYLOAD OFF", kWidth / 2, kHeight / 2 - 10);
+  canvas_.setFont(&fonts::Font2);
+  canvas_.drawString("GNSS receiver is powered off", kWidth / 2, kHeight / 2 + 18);
+  return true;
+}
+
 void TelemetryDisplay::drawSatellitesPage(const NmeaParser& parser) {
+  if (drawPayloadOffNotice()) return;
   SatelliteInfo sats[NmeaParser::kMaxSatellites];
   size_t count = parser.currentSatellites(sats, NmeaParser::kMaxSatellites);
   char text[16];
@@ -241,6 +255,7 @@ void TelemetryDisplay::drawSatellitesPage(const NmeaParser& parser) {
 }
 
 void TelemetryDisplay::drawSystemsPage(const NmeaParser& parser) {
+  if (drawPayloadOffNotice()) return;
   // 衛星システムごとの名前と運用国
   struct SystemLabel {
     GnssSystem system;

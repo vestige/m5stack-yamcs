@@ -25,6 +25,7 @@ class TelemetryDisplay {
   void drawTelemetryPage(const NmeaParser& parser);
   void drawSatellitesPage(const NmeaParser& parser);
   void drawSystemsPage(const NmeaParser& parser);
+  bool drawPayloadOffNotice();
   void drawHeader(const char* title, const GnssTelemetry& t, bool receiving);
   void drawButtonLabels();
   void drawRow(int index, const char* label, const char* value, uint16_t color);
