@@ -21,6 +21,8 @@ class Satellite {
   static const uint16_t kMaxBeepMs = 2000;
   // ペイロードの電源がONなのに、この時間GNSSのデータが届かなければ異常とみなす
   static const uint32_t kGnssTimeoutMs = 10000;
+  // 電源を入れてから最初のデータが届くまでは、機器が動き出すのを長めに待つ
+  static const uint32_t kGnssStartupTimeoutMs = 30000;
 
   // コマンドを処理した結果
   struct Result {

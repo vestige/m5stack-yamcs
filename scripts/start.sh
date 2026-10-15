@@ -63,8 +63,8 @@ start_udp_receiver() {
   local serial_args=()
   if [[ -n "$GROUND_STATION_SERIAL" ]]; then
     if [[ ! -e "$GROUND_STATION_SERIAL" ]]; then
-      echo "udp_receiver: 地上局の無線機 $GROUND_STATION_SERIAL が見つかりません。USBの接続を確認してください" >&2
-      exit 1
+      # 受信スクリプトは、USBがあとからつながったら自動でつなぎ直す
+      echo "udp_receiver: 地上局の無線機 $GROUND_STATION_SERIAL がまだつながっていません。つながったら自動で受信を始めます" >&2
     fi
     serial_args=(--serial "$GROUND_STATION_SERIAL")
   fi

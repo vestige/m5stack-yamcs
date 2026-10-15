@@ -6,12 +6,21 @@
 void GnssReceiver::begin(int rxPin, int txPin) { serial_.begin(115200, SERIAL_8N1, rxPin, txPin); }
 
 void GnssReceiver::poll(bool payloadPower) {
+  if (powered_ && !payloadPower) {
+    parser_ = NmeaParser();
+    lastSentenceMs_ = 0;
+  }
+  powered_ = payloadPower;
+
   while (serial_.available()) {
     char c = serial_.read();
 #if ECHO_RAW_NMEA
     Serial.write(c);
 #endif
-    if (payloadPower && parser_.encode(c)) lastSentenceMs_ = millis();
+    if (payloadPower && parser_.encode(c)) {
+      if (lastSentenceMs_ == 0) Serial.printf("[GNSS] first sentence at %lu ms\n", millis());
+      lastSentenceMs_ = millis();
+    }
   }
 }
 

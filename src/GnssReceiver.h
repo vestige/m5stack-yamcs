@@ -7,7 +7,8 @@
 class GnssReceiver {
  public:
   void begin(int rxPin, int txPin);
-  // 届いたNMEAを読む。ペイロードの電源がOFFの間は読み捨てる
+  // 届いたNMEAを読む。ペイロードの電源がOFFの間は読み捨てる。
+  // 電源を切ったら、受信の状態 (位置や衛星の一覧) も消える
   void poll(bool payloadPower);
 
   const NmeaParser& parser() const { return parser_; }
@@ -22,4 +23,5 @@ class GnssReceiver {
   HardwareSerial serial_{2};
   NmeaParser parser_;
   uint32_t lastSentenceMs_ = 0;
+  bool powered_ = true;
 };
