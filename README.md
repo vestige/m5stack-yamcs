@@ -522,13 +522,64 @@ YAMCSが判断に使うのは、届いている最新のテレメトリです。
 
 **運用シナリオ**：範囲外の `SET_TM_INTERVAL` は地上で止められる。SAFEモードのまま `PAYLOAD_POWER ON` を送ろうとすると地上で止められ、`SET_MODE` は待ち行列に入り、Commanding → Queues で承認してはじめて衛星へ送られることを確かめる。
 
-#### 5-6 ペイロード運用と観測データ
+#### 5-6 ペイロード運用と観測データ ✅
 
-ペイロードの電源がONで、MISSIONモードのときだけ観測データを送ります。観測データは、SATS画面で見ている衛星ごとの信号強度（C/N0）・仰角・方位角の一覧で、さらに別のAPIDで送ります。
+ペイロード（GNSS受信機）で「観測」を行い、観測データを地上へ送ります。観測は時刻指定で予約でき、衛星は予約した時刻に自分でMISSIONへ移って観測を始め、自分で終えます。地上と通信できない間も、計画どおりに動きます。
 
-観測は時刻指定コマンドで予約できるようにします。「UTC 12:00から10分間観測する」のように予約しておくと、衛星がGNSSの時刻を見て自分で観測を始め、自分で終えます。本物の衛星と同じく、地上と通信できない間も計画どおりに動くことを確かめます。
+##### 観測データ（APID 104）
 
-**運用シナリオ**：運用者は5分後から3分間の観測を予約する。予約した時刻になると衛星がMISSIONへ移って観測データを送り始め、3分後にNOMINALへ戻る。観測中の衛星ごとのC/N0をグラフで確認する。
+MISSIONモードで、ペイロードの電源がONのときだけ、テレメトリの周期で送ります。YAMCSでは `/M5Sat/GNSS/` の下に並びます。
+
+| Offset | Size | 型 | パラメータ | 内容 |
+| --- | --- | --- | --- | --- |
+| 0 | 6 | - | - | CCSDS Primary Header（TM、APID=104） |
+| 6 | 4 | uint32 | `ObservationTime` | 観測した時刻（Unix秒） |
+| 10 | 1 | uint8 | `ObservedCount` | 見えている衛星の数（下の一覧の数、最大32） |
+| 11 | 1 | uint8 | `TrackedCount` | 信号を捕捉している衛星の数 |
+| 12 | 1 | uint8 | `MaxCn0` | C/N0の最大（dB-Hz） |
+| 13 | 1 | uint8 | `AverageCn0` | 捕捉している衛星のC/N0の平均（dB-Hz） |
+| 14 | 5 | uint8 | `TrackedGps` / `TrackedGlonass` / `TrackedGalileo` / `TrackedBeidou` / `TrackedQzss` | システム別の捕捉数 |
+| 19 | 6×N | - | `ObservedSatellites` | 衛星ごとの一覧（C/N0の強い順）。1機ごとに システム・衛星番号・仰角・方位角・C/N0 |
+
+- まとめの値（`TrackedCount`、`AverageCn0` など）は、YAMCSでそのままグラフにできます
+- 衛星ごとの一覧は、Mission Database で「構造体の配列」（`ArrayParameterType` と `AggregateParameterType`）として定義しています。配列の長さは、パケットの中の `ObservedCount` で決まります
+
+##### 機上時刻
+
+予約した時刻を判断するため、衛星は今の時刻（機上時刻）を持っています（[OnboardClock.h](lib/Satellite/src/OnboardClock.h)）。
+
+- GPSの時刻が届くたびに合わせ、その間は衛星の中の時計で数え続けます。ペイロードを切っても、時刻はわかります
+- まだ一度もGPSの時刻を受け取っていなければ「不明」です。このときは時刻指定のコマンドを受け付けません
+- HKの `/M5Sat/Bus/OnboardTime` で見られます
+
+##### 時刻指定の観測予約
+
+| ID | コマンド | 引数 | 内容 |
+| --- | --- | --- | --- |
+| 8 | `SCHEDULE_OBSERVATION` | `Start`（UTCの時刻）、`Duration`（10〜3600秒） | 観測を予約する。予約は1つだけで、新しく予約すると前の予約は置き換わる |
+| 9 | `CANCEL_OBSERVATION` | なし | 予約、または観測中の観測を取り消す（観測中ならNOMINALに戻る） |
+
+どちらも衛星のモードを変えるので、重要度は critical です（Commanding → Queues で承認してから送ります）。`Start` は、Web UIでは時刻として入力できます。
+
+| 予約した時刻に | 衛星がすること | イベント |
+| --- | --- | --- |
+| NOMINALで、ペイロードがON | MISSIONへ移って観測を始める | `OBSERVATION_STARTED` |
+| ペイロードがOFF、またはNOMINALでない | 観測を見送る | `OBSERVATION_SKIPPED`（WARNING） |
+| 長さが過ぎた | NOMINALへ戻る | `OBSERVATION_ENDED`（完了） |
+| 観測中にMISSIONでなくなった（FDIRの退避など） | 観測を中断する | `OBSERVATION_ENDED`（中断、WARNING） |
+
+機上時刻が不明なとき、開始時刻が過去のとき、観測中に予約し直そうとしたときは、衛星がコマンドを拒否します。
+
+HKには、観測の状態を表す項目を追加しました（HKのパケットは44バイトになりました）。
+
+| Offset | Size | 型 | パラメータ | 内容 |
+| --- | --- | --- | --- | --- |
+| 33 | 4 | uint32 | `OnboardTime` | 機上時刻（Unix秒、不明なら0） |
+| 37 | 1 | uint8 | `ObservationState` | 0=NONE, 1=SCHEDULED（予約中）, 2=ACTIVE（観測中） |
+| 38 | 4 | uint32 | `ObservationStart` | 予約した開始時刻 |
+| 42 | 2 | uint16 | `ObservationDuration` | 予約した長さ（秒） |
+
+**運用シナリオ**：運用者は5分後から3分間の観測を予約する（Queuesで承認する）。予約した時刻になると衛星がMISSIONへ移って観測データを送り始め、3分後にNOMINALへ戻る。観測中の衛星ごとのC/N0やまとめの値をYAMCSで確認する。予約を取り消すと観測は行われず、観測中にペイロードを切ると観測は中断になることも確かめる。
 
 #### 5-7 運用手順（コマンドスタック）
 

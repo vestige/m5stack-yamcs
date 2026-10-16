@@ -8,6 +8,7 @@
                        イベント                        APID 103  lib/TelemetryPacket/src/EventPacket.h
                        コマンド (TC)                   APID 110  lib/Satellite/src/Telecommand.h
   /M5Sat/GNSS     ペイロード: GNSS受信機のテレメトリ    APID 100  lib/TelemetryPacket/src/TelemetryPacket.h
+                       観測データ                      APID 104  lib/TelemetryPacket/src/ObservationPacket.h
 -->
 <SpaceSystem name="M5Sat" xmlns="http://www.omg.org/spec/XTCE/20180204" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.omg.org/spec/XTCE/20180204 https://www.omg.org/spec/XTCE/20180204/SpaceSystem.xsd">
 	<TelemetryMetaData>
@@ -97,6 +98,28 @@
 				<IntegerParameterType name="Fault_Count_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="16" />
 				</IntegerParameterType>
+				<AbsoluteTimeParameterType name="Unix_Time_Type">
+					<Encoding units="seconds">
+						<IntegerDataEncoding sizeInBits="32" />
+					</Encoding>
+					<ReferenceTime>
+						<Epoch>UNIX</Epoch>
+					</ReferenceTime>
+				</AbsoluteTimeParameterType>
+				<EnumeratedParameterType name="Observation_State_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="NONE" />
+						<Enumeration value="1" label="SCHEDULED" />
+						<Enumeration value="2" label="ACTIVE" />
+					</EnumerationList>
+				</EnumeratedParameterType>
+				<IntegerParameterType name="Seconds_Type" signed="false">
+					<UnitSet>
+						<Unit>s</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="16" />
+				</IntegerParameterType>
 				<BooleanParameterType name="Power_Type" zeroStringValue="OFF" oneStringValue="ON">
 					<IntegerDataEncoding sizeInBits="8" />
 				</BooleanParameterType>
@@ -114,6 +137,8 @@
 						<Enumeration value="5" label="RESET_COUNTERS" />
 						<Enumeration value="6" label="BEEP" />
 						<Enumeration value="7" label="SET_FDIR" />
+						<Enumeration value="8" label="SCHEDULE_OBSERVATION" />
+						<Enumeration value="9" label="CANCEL_OBSERVATION" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Tc_Sequence_Type" signed="false">
@@ -150,6 +175,11 @@
 						<Enumeration value="6" label="COMMAND_REJECTED" />
 						<Enumeration value="7" label="FAULT_DETECTED" />
 						<Enumeration value="8" label="FDIR_CHANGED" />
+						<Enumeration value="9" label="OBSERVATION_SCHEDULED" />
+						<Enumeration value="10" label="OBSERVATION_STARTED" />
+						<Enumeration value="11" label="OBSERVATION_ENDED" />
+						<Enumeration value="12" label="OBSERVATION_SKIPPED" />
+						<Enumeration value="13" label="OBSERVATION_CANCELLED" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Event_Arg_Type" signed="false">
@@ -221,6 +251,10 @@
 				<Parameter name="FdirEnabled" parameterTypeRef="Power_Type" shortDescription="FDIR (異常時の自動退避) が有効か" />
 				<Parameter name="LastFault" parameterTypeRef="Fault_Type" shortDescription="FDIRが最後に検知した異常" />
 				<Parameter name="FaultCount" parameterTypeRef="Fault_Count_Type" shortDescription="FDIRが異常を検知した回数" />
+				<Parameter name="OnboardTime" parameterTypeRef="Unix_Time_Type" shortDescription="機上時刻 (まだGPSの時刻で合わせていなければ1970-01-01)" />
+				<Parameter name="ObservationState" parameterTypeRef="Observation_State_Type" shortDescription="時刻指定の観測の状態" />
+				<Parameter name="ObservationStart" parameterTypeRef="Unix_Time_Type" shortDescription="予約した観測の開始時刻" />
+				<Parameter name="ObservationDuration" parameterTypeRef="Seconds_Type" shortDescription="予約した観測の長さ" />
 				<Parameter name="AckTcSequence" parameterTypeRef="Tc_Sequence_Type" shortDescription="ACK: どのTC (シーケンス番号) への応答か" />
 				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
 				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
@@ -249,6 +283,10 @@
 						<ParameterRefEntry parameterRef="FdirEnabled" />
 						<ParameterRefEntry parameterRef="LastFault" />
 						<ParameterRefEntry parameterRef="FaultCount" />
+						<ParameterRefEntry parameterRef="OnboardTime" />
+						<ParameterRefEntry parameterRef="ObservationState" />
+						<ParameterRefEntry parameterRef="ObservationStart" />
+						<ParameterRefEntry parameterRef="ObservationDuration" />
 					</EntryList>
 					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
 						<RestrictionCriteria>
@@ -307,7 +345,8 @@
 if (Yamcs.processorName() != "realtime") return;
 
 var MODE = ["SAFE", "NOMINAL", "MISSION"];
-var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP", "SET_FDIR"];
+var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP", "SET_FDIR",
+               "SCHEDULE_OBSERVATION", "CANCEL_OBSERVATION"];
 var FAULT = ["NONE", "GNSSのデータが届きません"];
 var ERROR = ["", "知らないコマンドです", "引数の長さが違います", "引数が範囲外です",
              "今の状態では実行できません", "TCパケットとして不正です"];
@@ -343,6 +382,22 @@ switch (eventId.value) {
     break;
   case "FDIR_CHANGED":
     message = "FDIR (異常時の自動退避) を " + (a1 == 1 ? "有効" : "無効") + " にしました";
+    break;
+  case "OBSERVATION_SCHEDULED":
+    message = "観測を予約しました (" + a1 + "秒後から " + a2 + "秒間)";
+    break;
+  case "OBSERVATION_STARTED":
+    message = "観測を始めました (" + a1 + "秒間)";
+    break;
+  case "OBSERVATION_ENDED":
+    message = a1 == 0 ? "観測を終えました" : "観測を中断しました (MISSIONモードでなくなりました)";
+    break;
+  case "OBSERVATION_SKIPPED":
+    message = "予約した観測を見送りました: " +
+        (a1 == 1 ? "ペイロードの電源がOFFです" : "NOMINALモードではありません (" + name(MODE, a2) + ")");
+    break;
+  case "OBSERVATION_CANCELLED":
+    message = a1 == 1 ? "観測中の観測を取り消しました" : "観測の予約を取り消しました";
     break;
   default:
     message = "不明なイベント (" + eventId.rawValue + ", " + a1 + ", " + a2 + ")";
@@ -400,6 +455,23 @@ switch (severity.value) {
 					<IntegerDataEncoding sizeInBits="16" />
 					<ValidRangeSet>
 						<ValidRange minInclusive="200" maxInclusive="10000" />
+					</ValidRangeSet>
+				</IntegerArgumentType>
+				<AbsoluteTimeArgumentType name="Unix_Time_Arg_Type">
+					<Encoding units="seconds">
+						<IntegerDataEncoding sizeInBits="32" />
+					</Encoding>
+					<ReferenceTime>
+						<Epoch>UNIX</Epoch>
+					</ReferenceTime>
+				</AbsoluteTimeArgumentType>
+				<IntegerArgumentType name="Observation_Duration_Arg_Type" signed="false">
+					<UnitSet>
+						<Unit>s</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="16" />
+					<ValidRangeSet>
+						<ValidRange minInclusive="10" maxInclusive="3600" />
 					</ValidRangeSet>
 				</IntegerArgumentType>
 				<IntegerArgumentType name="Beep_Duration_Arg_Type" signed="false">
@@ -626,6 +698,37 @@ switch (severity.value) {
 					</CommandContainer>
 					<DefaultSignificance consequenceLevel="critical" reasonForWarning="異常時の自動退避の有効・無効が変わります" />
 				</MetaCommand>
+				<MetaCommand name="SCHEDULE_OBSERVATION" shortDescription="時刻指定で観測を予約する (開始時刻はUTC、長さは10〜3600秒)">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="8" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="Start" argumentTypeRef="Unix_Time_Arg_Type" />
+						<Argument name="Duration" argumentTypeRef="Observation_Duration_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="SCHEDULE_OBSERVATION">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="Start" />
+							<ArgumentRefEntry argumentRef="Duration" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+					<DefaultSignificance consequenceLevel="critical" reasonForWarning="予約した時刻に、衛星が自分でMISSIONモードへ移ります" />
+				</MetaCommand>
+				<MetaCommand name="CANCEL_OBSERVATION" shortDescription="観測の予約、または観測中の観測を取り消す">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="9" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<CommandContainer name="CANCEL_OBSERVATION">
+						<EntryList />
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+					<DefaultSignificance consequenceLevel="critical" reasonForWarning="観測中なら、衛星はNOMINALモードへ戻ります" />
+				</MetaCommand>
 			</MetaCommandSet>
 		</CommandMetaData>
 	</SpaceSystem>
@@ -712,6 +815,66 @@ switch (severity.value) {
 				<IntegerParameterType name="Counter_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="32" />
 				</IntegerParameterType>
+
+				<!-- 観測データ (APID 104) -->
+				<IntegerParameterType name="Count_Type" signed="false">
+					<IntegerDataEncoding sizeInBits="8" />
+				</IntegerParameterType>
+				<IntegerParameterType name="Cn0_Type" signed="false">
+					<UnitSet>
+						<Unit>dB-Hz</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="8" />
+				</IntegerParameterType>
+				<EnumeratedParameterType name="Gnss_System_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="GPS" />
+						<Enumeration value="1" label="GLONASS" />
+						<Enumeration value="2" label="Galileo" />
+						<Enumeration value="3" label="BeiDou" />
+						<Enumeration value="4" label="QZSS" />
+						<Enumeration value="5" label="NavIC" />
+						<Enumeration value="6" label="Unknown" />
+					</EnumerationList>
+				</EnumeratedParameterType>
+				<IntegerParameterType name="Elevation_Type" signed="true">
+					<UnitSet>
+						<Unit>deg</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="8" encoding="twosComplement" />
+				</IntegerParameterType>
+				<IntegerParameterType name="Azimuth_Type" signed="false">
+					<UnitSet>
+						<Unit>deg</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="16" />
+				</IntegerParameterType>
+				<AggregateParameterType name="Observed_Satellite_Type">
+					<MemberList>
+						<Member name="System" typeRef="Gnss_System_Type" />
+						<Member name="Prn" typeRef="Count_Type" />
+						<Member name="Elevation" typeRef="Elevation_Type" />
+						<Member name="Azimuth" typeRef="Azimuth_Type" />
+						<Member name="Cn0" typeRef="Cn0_Type" />
+					</MemberList>
+				</AggregateParameterType>
+				<!-- 長さはパケットの中の「見えている衛星の数」で決まる -->
+				<ArrayParameterType name="Observed_Satellites_Type" arrayTypeRef="Observed_Satellite_Type">
+					<DimensionList>
+						<Dimension>
+							<StartingIndex>
+								<FixedValue>0</FixedValue>
+							</StartingIndex>
+							<EndingIndex>
+								<DynamicValue>
+									<ParameterInstanceRef parameterRef="ObservedCount" />
+									<LinearAdjustment intercept="-1" />
+								</DynamicValue>
+							</EndingIndex>
+						</Dimension>
+					</DimensionList>
+				</ArrayParameterType>
 			</ParameterTypeSet>
 
 			<ParameterSet>
@@ -732,6 +895,18 @@ switch (severity.value) {
 				<Parameter name="Uptime" parameterTypeRef="Uptime_Type" shortDescription="M5Stackの起動からの経過時間" />
 				<Parameter name="NmeaValidSentences" parameterTypeRef="Counter_Type" shortDescription="正常に受信したNMEAセンテンス数" />
 				<Parameter name="NmeaChecksumErrors" parameterTypeRef="Counter_Type" shortDescription="NMEAのチェックサムエラー数" />
+
+				<Parameter name="ObservationTime" parameterTypeRef="Unix_Time_Type" shortDescription="観測データ: 観測した時刻" />
+				<Parameter name="ObservedCount" parameterTypeRef="Count_Type" shortDescription="観測データ: 見えている衛星の数 (一覧の数)" />
+				<Parameter name="TrackedCount" parameterTypeRef="Count_Type" shortDescription="観測データ: 信号を捕捉している衛星の数" />
+				<Parameter name="MaxCn0" parameterTypeRef="Cn0_Type" shortDescription="観測データ: C/N0の最大" />
+				<Parameter name="AverageCn0" parameterTypeRef="Cn0_Type" shortDescription="観測データ: 捕捉している衛星のC/N0の平均" />
+				<Parameter name="TrackedGps" parameterTypeRef="Count_Type" shortDescription="観測データ: 捕捉しているGPSの数" />
+				<Parameter name="TrackedGlonass" parameterTypeRef="Count_Type" shortDescription="観測データ: 捕捉しているGLONASSの数" />
+				<Parameter name="TrackedGalileo" parameterTypeRef="Count_Type" shortDescription="観測データ: 捕捉しているGalileoの数" />
+				<Parameter name="TrackedBeidou" parameterTypeRef="Count_Type" shortDescription="観測データ: 捕捉しているBeiDouの数" />
+				<Parameter name="TrackedQzss" parameterTypeRef="Count_Type" shortDescription="観測データ: 捕捉しているQZSS (みちびき) の数" />
+				<Parameter name="ObservedSatellites" parameterTypeRef="Observed_Satellites_Type" shortDescription="観測データ: 衛星ごとの一覧 (C/N0の強い順)" />
 			</ParameterSet>
 
 			<ContainerSet>
@@ -762,6 +937,31 @@ switch (severity.value) {
 							<ComparisonList>
 								<Comparison parameterRef="/M5Sat/CCSDS_Type" value="TM" />
 								<Comparison parameterRef="/M5Sat/CCSDS_APID" value="100" />
+							</ComparisonList>
+						</RestrictionCriteria>
+					</BaseContainer>
+				</SequenceContainer>
+
+				<!-- APID 104: 観測データ (MISSIONモードのときだけ届く) -->
+				<SequenceContainer name="Observation">
+					<EntryList>
+						<ParameterRefEntry parameterRef="ObservationTime" />
+						<ParameterRefEntry parameterRef="ObservedCount" />
+						<ParameterRefEntry parameterRef="TrackedCount" />
+						<ParameterRefEntry parameterRef="MaxCn0" />
+						<ParameterRefEntry parameterRef="AverageCn0" />
+						<ParameterRefEntry parameterRef="TrackedGps" />
+						<ParameterRefEntry parameterRef="TrackedGlonass" />
+						<ParameterRefEntry parameterRef="TrackedGalileo" />
+						<ParameterRefEntry parameterRef="TrackedBeidou" />
+						<ParameterRefEntry parameterRef="TrackedQzss" />
+						<ParameterRefEntry parameterRef="ObservedSatellites" />
+					</EntryList>
+					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
+						<RestrictionCriteria>
+							<ComparisonList>
+								<Comparison parameterRef="/M5Sat/CCSDS_Type" value="TM" />
+								<Comparison parameterRef="/M5Sat/CCSDS_APID" value="104" />
 							</ComparisonList>
 						</RestrictionCriteria>
 					</BaseContainer>

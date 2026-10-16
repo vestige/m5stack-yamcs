@@ -1,6 +1,7 @@
 #include "GroundLink.h"
 
 #include <Arduino.h>
+#include <ObservationPacket.h>
 #include <TelemetryPacket.h>
 
 void GroundLink::begin(PacketTransport& transport) {
@@ -40,6 +41,14 @@ void GroundLink::sendEvent(const EventPacket::Event& event) {
   uint8_t packet[EventPacket::kPacketSize];
   size_t size = EventPacket::encode(event, eventSequence_, packet, sizeof(packet));
   send(packet, size, eventSequence_);
+}
+
+void GroundLink::sendObservation(uint32_t utcTime, const NmeaParser& parser) {
+  SatelliteInfo satellites[NmeaParser::kMaxSatellites];
+  size_t count = parser.currentSatellites(satellites, NmeaParser::kMaxSatellites);
+  uint8_t packet[ObservationPacket::kMaxPacketSize];
+  size_t size = ObservationPacket::encode(utcTime, satellites, count, observationSequence_, packet, sizeof(packet));
+  send(packet, size, observationSequence_);
 }
 
 size_t GroundLink::receiveTelecommand(uint8_t* buffer, size_t capacity) {

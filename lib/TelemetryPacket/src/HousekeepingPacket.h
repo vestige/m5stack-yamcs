@@ -22,15 +22,22 @@
 //     29    1  uint8   FDIR enabled (0=OFF, 1=ON)
 //     30    1  uint8   last fault (Fault)
 //     31    2  uint16  fault count
+//     33    4  uint32  onboard time (Unix秒。まだ一度も合わせていなければ0)
+//     37    1  uint8   observation state (ObservationState)
+//     38    4  uint32  observation start (Unix秒。予約がなければ0)
+//     42    2  uint16  observation duration (秒)
 namespace HousekeepingPacket {
 
 const uint16_t kApid = 101;
-const size_t kPacketSize = 33;
+const size_t kPacketSize = 44;
 
 enum class OperationMode : uint8_t { Safe = 0, Nominal = 1, Mission = 2 };
 
 // FDIRが検知した異常
 enum class Fault : uint8_t { None = 0, GnssNoData = 1 };
+
+// 時刻指定の観測の状態
+enum class ObservationState : uint8_t { None = 0, Scheduled = 1, Active = 2 };
 
 struct Housekeeping {
   OperationMode mode = OperationMode::Nominal;
@@ -47,6 +54,10 @@ struct Housekeeping {
   bool fdirEnabled = true;
   Fault lastFault = Fault::None;
   uint16_t faultCount = 0;
+  uint32_t onboardTime = 0;
+  ObservationState observationState = ObservationState::None;
+  uint32_t observationStart = 0;
+  uint16_t observationDuration = 0;
 };
 
 // パケットをbufferに書き込み、書き込んだバイト数を返す。bufferが小さければ0を返す。

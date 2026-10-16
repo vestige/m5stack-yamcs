@@ -1,5 +1,7 @@
 #include "GnssReceiver.h"
 
+#include <TelemetryPacket.h>
+
 // 1にすると受信したNMEAをそのままシリアルへ流す（Milestone 1の動作）
 #define ECHO_RAW_NMEA 0
 
@@ -22,6 +24,16 @@ void GnssReceiver::poll(bool payloadPower) {
       lastSentenceMs_ = millis();
     }
   }
+}
+
+bool GnssReceiver::takeNewUtc(uint32_t* utcSec) {
+  const GnssTelemetry& t = parser_.telemetry();
+  if (!t.timeValid || !t.dateValid) return false;
+  uint32_t utc = TelemetryPacket::toUnixTime(t.year, t.month, t.day, t.hour, t.minute, t.second);
+  if (utc == lastUtc_) return false;
+  lastUtc_ = utc;
+  *utcSec = utc;
+  return true;
 }
 
 bool GnssReceiver::receiving(uint32_t now) const {

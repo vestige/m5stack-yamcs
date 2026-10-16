@@ -15,6 +15,7 @@ TCは、直近にTMを送ってきた衛星のIPアドレスへ送る。TMが届
     APID 101 HK             lib/TelemetryPacket/src/HousekeepingPacket.h
     APID 102 ACK            lib/TelemetryPacket/src/AckPacket.h
     APID 103 イベント        lib/TelemetryPacket/src/EventPacket.h
+    APID 104 観測データ      lib/TelemetryPacket/src/ObservationPacket.h
     APID 110 TC             lib/Satellite/src/Telecommand.h
 """
 
@@ -33,17 +34,24 @@ APID_GNSS = 100
 APID_HOUSEKEEPING = 101
 APID_ACK = 102
 APID_EVENT = 103
+APID_OBSERVATION = 104
 APID_TELECOMMAND = 110
 
 # time, ms, lat, lon, alt, sats, fixQuality, fixType, flags, uptime, ok, err
 GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
 # mode, payloadPower, accepted, rejected, lastCommand, rssi, freeHeap, minFreeHeap, uptime, bootCount, resetReason,
-# fdirEnabled, lastFault, faultCount
-HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBH")
+# fdirEnabled, lastFault, faultCount, onboardTime, observationState, observationStart, observationDuration
+HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIH")
 # tcSequence, commandId, stage, errorCode
 ACK_PAYLOAD = struct.Struct(">HBBB")
 # severity, eventId, arg1, arg2
 EVENT_PAYLOAD = struct.Struct(">BBHH")
+# utc, count, tracked, maxCn0, avgCn0, GPS, GLONASS, Galileo, BeiDou, QZSS
+OBSERVATION_HEADER = struct.Struct(">IBBBBBBBBB")
+# system, prn, elevation, azimuth, cn0
+OBSERVATION_ENTRY = struct.Struct(">BBbHB")
+GNSS_SYSTEM = {0: "G", 1: "R", 2: "E", 3: "C", 4: "J", 5: "I"}
+OBSERVATION_STATE = {0: "NONE", 1: "SCHEDULED", 2: "ACTIVE"}
 
 FLAG_TIME_VALID = 1 << 0
 FLAG_DATE_VALID = 1 << 1
@@ -62,6 +70,8 @@ COMMAND = {
     5: "RESET_COUNTERS",
     6: "BEEP",
     7: "SET_FDIR",
+    8: "SCHEDULE_OBSERVATION",
+    9: "CANCEL_OBSERVATION",
 }
 FAULT = {0: "NONE", 1: "GNSS_NO_DATA"}
 ACK_STAGE = {1: "ACCEPTED", 2: "REJECTED", 3: "COMPLETED", 4: "FAILED"}
@@ -83,6 +93,11 @@ EVENT_ID = {
     6: "COMMAND_REJECTED",
     7: "FAULT_DETECTED",
     8: "FDIR_CHANGED",
+    9: "OBSERVATION_SCHEDULED",
+    10: "OBSERVATION_STARTED",
+    11: "OBSERVATION_ENDED",
+    12: "OBSERVATION_SKIPPED",
+    13: "OBSERVATION_CANCELLED",
 }
 # ESP-IDF の esp_reset_reason_t
 RESET_REASON = {
@@ -145,13 +160,39 @@ def format_gnss(data):
 
 def format_housekeeping(data):
     (mode, payload, accepted, rejected, last_command, rssi, free_heap, min_free_heap, uptime, boot_count,
-     reset_reason, fdir, last_fault, fault_count) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
+     reset_reason, fdir, last_fault, fault_count, onboard_time, obs_state, obs_start,
+     obs_duration) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
     return (
         f"HK   mode={MODE.get(mode, mode)} payload={'ON' if payload else 'OFF'} "
         f"cmd(ok={accepted} ng={rejected} last={COMMAND.get(last_command, 'NONE')}) rssi={rssi}dBm "
         f"heap={free_heap}(min {min_free_heap}) uptime={uptime / 1000:.1f}s "
         f"boot={boot_count} reset={RESET_REASON.get(reset_reason, reset_reason)} "
-        f"fdir={'ON' if fdir else 'OFF'} fault={FAULT.get(last_fault, last_fault)}x{fault_count}"
+        f"fdir={'ON' if fdir else 'OFF'} fault={FAULT.get(last_fault, last_fault)}x{fault_count} "
+        f"time={format_utc(onboard_time)} obs={OBSERVATION_STATE.get(obs_state, obs_state)}"
+        + (f"({format_utc(obs_start)} {obs_duration}s)" if obs_state else "")
+    )
+
+
+def format_utc(seconds):
+    if not seconds:
+        return "--:--:--"
+    return datetime.datetime.fromtimestamp(seconds, datetime.timezone.utc).strftime("%H:%M:%SZ")
+
+
+def format_observation(data):
+    if len(data) < PRIMARY_HEADER.size + OBSERVATION_HEADER.size:
+        raise ValueError(f"packet too short: {len(data)} bytes")
+    utc, count, tracked, max_cn0, avg_cn0, *per_system = OBSERVATION_HEADER.unpack_from(data, PRIMARY_HEADER.size)
+    offset = PRIMARY_HEADER.size + OBSERVATION_HEADER.size
+    if len(data) != offset + count * OBSERVATION_ENTRY.size:
+        raise ValueError(f"unexpected packet size: {len(data)} bytes for {count} satellites")
+    top = []
+    for i in range(min(count, 5)):
+        system, prn, _elevation, _azimuth, cn0 = OBSERVATION_ENTRY.unpack_from(data, offset + i * OBSERVATION_ENTRY.size)
+        top.append(f"{GNSS_SYSTEM.get(system, '?')}{prn:02d}:{cn0}")
+    return (
+        f"OBS  {format_utc(utc)} view={count} tracked={tracked} cn0(max {max_cn0} avg {avg_cn0}) "
+        f"GRECJ={'/'.join(str(n) for n in per_system)} top={' '.join(top)}"
     )
 
 
@@ -180,6 +221,16 @@ def format_event(data):
         detail = f"{FAULT.get(arg1, arg1)} {arg2}s"
     elif name == "FDIR_CHANGED":
         detail = "ON" if arg1 else "OFF"
+    elif name == "OBSERVATION_SCHEDULED":
+        detail = f"in {arg1}s for {arg2}s"
+    elif name == "OBSERVATION_STARTED":
+        detail = f"{arg1}s"
+    elif name == "OBSERVATION_ENDED":
+        detail = "completed" if arg1 == 0 else "interrupted"
+    elif name == "OBSERVATION_SKIPPED":
+        detail = "payload off" if arg1 == 1 else f"not nominal ({MODE.get(arg2, arg2)})"
+    elif name == "OBSERVATION_CANCELLED":
+        detail = "while active" if arg1 else "scheduled"
     else:
         detail = f"arg1={arg1} arg2={arg2}"
     return f"EVT  {EVENT_SEVERITY.get(severity, severity)} {name} {detail}"
@@ -197,6 +248,7 @@ FORMATTERS = {
     APID_HOUSEKEEPING: format_housekeeping,
     APID_ACK: format_ack,
     APID_EVENT: format_event,
+    APID_OBSERVATION: format_observation,
 }
 
 

@@ -22,6 +22,8 @@ enum class CommandId : uint8_t {
   ResetCounters = 5,
   Beep = 6,
   SetFdir = 7,
+  ScheduleObservation = 8,  // uint32 開始時刻 (Unix秒), uint16 長さ (秒)
+  CancelObservation = 9,
 };
 
 // コマンドを拒否・失敗した理由 (ACKで地上へ返す)
