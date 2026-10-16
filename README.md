@@ -36,6 +36,14 @@ Telemetry / Archive / Monitor
 - PlatformIO
 - Arduino Framework
 
+## Documents
+
+| ドキュメント | 内容 |
+| --- | --- |
+| [docs/scenarios.md](docs/scenarios.md) | 運用シナリオ集。YAMCS から衛星 M5Sat を運用するときの手順 |
+| [docs/real-operations.md](docs/real-operations.md) | 本物の衛星運用との対応。FDIR、承認と役割分担、観測の計画、機上時刻、地上局とパスなど |
+| [docs/yamcs-web-ui.md](docs/yamcs-web-ui.md) | YAMCS の Web UI の各メニューの役割 |
+
 ## Progress
 
 ### Milestone 1 - GNSS Reception ✅
@@ -272,7 +280,7 @@ M5Stackを1機の衛星に見立てて、YAMCSを地上局として運用する�
 
 > **M5Sat** は、地上に届くGNSS衛星の電波の強さを観測する衛星です。運用チームは、計画した時間帯にペイロードで観測を行い、観測データを地上で回収します。衛星に異常があれば、衛星は自分で安全なモードへ退避し、運用チームが原因を調べて復旧させます。
 
-各ステップの最後に、このミッションに沿った**運用シナリオ**を置きます。シナリオをYAMCS上で実際に操作して最後まで進められたら、そのステップは完了です。シナリオは作りながら育てていきます。
+各ステップには、このミッションに沿った**運用シナリオ**があります。シナリオをYAMCS上で実際に操作して最後まで進められたら、そのステップは完了です。手順は [docs/scenarios.md](docs/scenarios.md) にまとめていて、作りながら育てていきます。ここでは各ステップの仕様を書きます。
 
 #### 進め方
 
@@ -316,7 +324,7 @@ M5Stackを1機の衛星に見立てて、YAMCSを地上局として運用する�
 - リセットボタンによる再起動は、ESP32の仕様で `POWER_ON` として記録されます。
 - 電池残量はGrove Port Aと内部I2Cのピンが共用のため読めません（Milestone 2参照）。
 
-**運用シナリオ**：運用者はTelemetry → Parametersで衛星の健康状態を確認する。M5Stackを再起動すると再起動の回数が増え、Wi-Fiのアクセスポイントから離すとRSSIが下がることを確かめる。
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-1) を見てください。
 
 #### 5-2 Telecommand と Command Verification ✅
 
@@ -365,7 +373,7 @@ YAMCSのMission Databaseでは、ACKのシーケンス番号と、コマンド�
 
 Commanding → Command history を開くと、コマンドごとに Accepted → Complete と進む様子、または Failed になった様子を確認できます。拒否の理由は `/M5Sat/Bus/AckErrorCode` で見られます。
 
-**運用シナリオ**：運用者は `NO_OP` を送って通信路を確認し、Command historyで受理から実行完了までを見届ける。続けて `BEEP` を送ってM5Stackが鳴ることを確かめ、`SET_TM_INTERVAL` でテレメトリの周期を変える。範囲外の周期を送ると拒否され、HKの拒否カウンタが増えることを確認する。`PAYLOAD_POWER OFF` でGNSSテレメトリが止まり、そのまま `SET_MODE MISSION` を送ると拒否されることも確かめる。
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-2) を見てください。
 
 ##### ペイロード電源のLED
 
@@ -416,7 +424,7 @@ YAMCS: WARNING  M5Sat  COMMAND_REJECTED  コマンド SET_TM_INTERVAL を拒否�
 
 文章を組み立てているのは、Mission Database の `/M5Sat/Bus/SatelliteEventMessage` というアルゴリズム（JavaScript）です。イベントパケットが届くたびに動き、YAMCSの `EventLog` でイベントを出します。過去データの再生で同じイベントが重複しないよう、リアルタイムのプロセッサのときだけ出します。
 
-**運用シナリオ**：運用者はEventsを開いたまま、5-2のコマンドを順に送る。M5Stackを再起動すると `BOOT` が届き、`SET_MODE SAFE` ではモードの変更とペイロードの電源OFFの2つのイベントが届く。範囲外の `SET_TM_INTERVAL` を送ると、拒否の理由つきのイベントがWarningとして表示されることを確かめる。
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-3) を見てください。
 
 #### 5-4 運用モードと異常時の自動退避（FDIR） ✅
 
@@ -456,14 +464,9 @@ HKには、FDIRの状態を表す項目を追加しました（HKのパケット
 
 YAMCSでは、`/M5Sat/Bus/Mode` が SAFE になると **Warning のアラーム**が上がります。
 
-**復旧の手順**（5-5で地上の安全装置を入れたので、SAFEのままではペイロードを入れられません）
+復旧は地上からのコマンドで行います（`SET_MODE NOMINAL` → `PAYLOAD_POWER ON`）。手順は [docs/scenarios.md](docs/scenarios.md#s5-4) にあります。FDIRを宇宙機で重視する理由は [docs/real-operations.md](docs/real-operations.md#fdir) にまとめています。
 
-1. Alarms でアラームを確認（Acknowledge）し、Events の `FAULT_DETECTED` で何が起きたかを確かめる
-2. 原因を直す（今回はGPSユニットのケーブルを戻す）
-3. `SET_MODE NOMINAL` を送り、Commanding → Queues で承認する。`/M5Sat/Bus/Mode` が NOMINAL になったことを確かめる
-4. `PAYLOAD_POWER ON` を送り、`/M5Sat/GNSS/...` のデータが届き始めたことを確かめる。原因が直っていなければ、10秒後にFDIRがまたSAFEへ退避させる
-
-**運用シナリオ**：NOMINALで運用中にGPSユニットのケーブルを抜く。10秒後に衛星は自分でペイロードを切ってSAFEへ移り、地上ではアラームとイベントが上がる。運用者はAlarmsでアラームを確認（Acknowledge）し、ケーブルを戻してから上の手順で復旧させる。ケーブルを抜いたまま復旧させると（`SET_MODE NOMINAL` → `PAYLOAD_POWER ON`）、10秒後にまたSAFEへ退避することも確かめる。
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-4) を見てください。
 
 #### 5-5 コマンドの安全装置 ✅
 
@@ -499,28 +502,9 @@ YAMCSが判断に使うのは、届いている最新のテレメトリです。
 
 待ち行列は [yamcs/src/main/yamcs/etc/command-queue.yaml](yamcs/src/main/yamcs/etc/command-queue.yaml) で定義しています。ターミナルから試験するときは、`python3 tools/send_command.py SET_MODE Mode=NOMINAL --approve` のように `--approve` を付けると、待ち行列で自動で承認します（普段の運用では人が承認します）。
 
-**承認は誰と誰のやり取りか**
+待ち行列での承認が、本物の運用で誰と誰のやり取りにあたるか（管制局・ペイロード運用チーム・地上局の役割）は、[docs/real-operations.md](docs/real-operations.md#roles) にまとめています。
 
-本物の衛星運用では、衛星に関わる組織が役割を分けています。待ち行列での承認は、主に**管制局（運用センター）の中で**「コマンド担当が準備し、責任者が確認して送る」という二人確認を表しています。
-
-```text
-ペイロード運用チーム ──観測の依頼──▶ 管制局（運用センター） ──コマンド──▶ 地上局（アンテナ） ~~~▶ 衛星
-（科学者・利用者）                  ・コマンド担当が準備             （回線を提供する）
-                                    ・責任者が承認して送信
-```
-
-| 役割 | すること | 承認との関係 |
-| --- | --- | --- |
-| 管制局（運用センター） | 衛星全体の運用に責任を持つ。コマンドの最終判断をする | 待ち行列での承認は、ここでの「コマンド担当が準備 → 責任者（フライトディレクターなど）が確認して送る」という二人確認にあたる |
-| ペイロード運用チーム | 観測したいことを決め、管制局に観測を依頼する | 依頼は計画（Timeline、5-9）として管制局に渡すことが多い。管制局は衛星の状態や電力などを見て、受けるかを判断する |
-| 地上局（アンテナの局） | 衛星との回線を提供する。パスの時間にアンテナを向ける | 普通はコマンドの中身は承認しない。M5Satでは受信スクリプトと地上局の無線機（M5StickC）にあたる |
-
-今のM5Satはログインなし（全員が `guest`）で動かしています。YAMCSでユーザーを作ると、役割ごとに権限を分けられます。
-
-- **Clearances**：運用者ごとに、送ってよいコマンドの重要度の上限を決める（例：ペイロード運用者は vital まで、責任者は critical まで）
-- **待ち行列の担当**：待ち行列ごとに、使えるユーザーやグループを決める（`command-queue.yaml` の `users` / `groups`）
-
-**運用シナリオ**：範囲外の `SET_TM_INTERVAL` は地上で止められる。SAFEモードのまま `PAYLOAD_POWER ON` を送ろうとすると地上で止められ、`SET_MODE` は待ち行列に入り、Commanding → Queues で承認してはじめて衛星へ送られることを確かめる。
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-5) を見てください。
 
 #### 5-6 ペイロード運用と観測データ ✅
 
@@ -579,7 +563,9 @@ HKには、観測の状態を表す項目を追加しました（HKのパケッ�
 | 38 | 4 | uint32 | `ObservationStart` | 予約した開始時刻 |
 | 42 | 2 | uint16 | `ObservationDuration` | 予約した長さ（秒） |
 
-**運用シナリオ**：運用者は5分後から3分間の観測を予約する（Queuesで承認する）。予約した時刻になると衛星がMISSIONへ移って観測データを送り始め、3分後にNOMINALへ戻る。観測中の衛星ごとのC/N0やまとめの値をYAMCSで確認する。予約を取り消すと観測は行われず、観測中にペイロードを切ると観測は中断になることも確かめる。
+本物の衛星で観測をどう計画・運用しているかは、[docs/real-operations.md](docs/real-operations.md#planning) にまとめています。
+
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-6) を見てください。
 
 #### 5-7 運用手順（コマンドスタック）
 
@@ -591,13 +577,13 @@ HKには、観測の状態を表す項目を追加しました（HKのパケッ�
 | 観測終了 | `SET_MODE NOMINAL` → `PAYLOAD_POWER OFF` |
 | SAFEからの復旧 | 状態を確認 → `RESET_COUNTERS` → `SET_MODE NOMINAL` |
 
-**運用シナリオ**：運用者はProcedures → Stacksで「観測開始」のスタックを1行ずつ実行し、各コマンドの実行完了を確認してから次へ進む。途中のコマンドが拒否されたら、そこで止まることを確かめる。
+**運用シナリオ**（予定）：[docs/scenarios.md](docs/scenarios.md#planned) を見てください。
 
 #### 5-8 運用画面
 
 運用者が1画面で衛星の状態を把握できるよう、モード・ペイロードの状態・アラーム・コマンドカウンタ・GNSSの状態をまとめた画面を、Parameter listsとDisplaysで作ります。
 
-**運用シナリオ**：運用者は運用画面だけを見ながら、5-7の「観測開始」から「観測終了」までの手順を進める。他のメニューを開かなくても、各手順の結果を確認できることを確かめる。
+**運用シナリオ**（予定）：[docs/scenarios.md](docs/scenarios.md#planned) を見てください。
 
 #### 5-9 Timeline とパス運用
 
@@ -609,7 +595,7 @@ YAMCSのTimelineに運用計画を書き込みます。
 
 パスの時間だけデータリンクを有効にして、衛星と通信できる時間が限られている状況を再現します。パスが終わったら、Archive browserで残ったデータと計画を時間軸の上で照らし合わせて振り返ります。
 
-**運用シナリオ**：運用者は10分ごとに2分間のパスと、パスの間の観測をTimelineに計画する。パスが始まったらHKを確認し、次の観測を予約してパスを終える。後でArchive browserを開き、観測が計画どおりの時間に行われたかを確認する。
+**運用シナリオ**（予定）：[docs/scenarios.md](docs/scenarios.md#planned) を見てください。
 
 #### 5-10 異常対応の訓練
 
@@ -621,7 +607,7 @@ YAMCSのTimelineに運用計画を書き込みます。
 | コマンドの無視 | 衛星が一定時間コマンドに応答しなくなる |
 | 再起動 | 衛星が予告なく再起動する |
 
-**運用シナリオ**：訓練の出題者は、運用者に知らせずに異常を1つ起こす。運用者はアラームやイベントから異常に気づき、Command historyやHKを手がかりに原因を推定し、5-7の復旧手順で衛星を元に戻す。気づくまでと復旧までにかかった時間を記録する。
+**運用シナリオ**（予定）：[docs/scenarios.md](docs/scenarios.md#planned) を見てください。
 
 #### 発展
 
