@@ -1,0 +1,72 @@
+{
+  "steps": [
+    {
+      "type": "text",
+      "text": "## 観測終了\n\nMISSIONモードを終えて NOMINAL に戻し、ペイロードの電源を切る。\n\n`SET_MODE` は Queues での承認が必要。"
+    },
+    {
+      "type": "check",
+      "parameters": [
+        {
+          "parameter": "/M5Sat/Bus/Mode"
+        },
+        {
+          "parameter": "/M5Sat/Bus/ObservationState"
+        }
+      ],
+      "comment": "時刻指定の観測の最中なら、先に CANCEL_OBSERVATION で取り消すかを判断する"
+    },
+    {
+      "type": "command",
+      "name": "/M5Sat/Bus/SET_MODE",
+      "advancement": {
+        "acknowledgment": "CommandComplete"
+      },
+      "arguments": [
+        {
+          "name": "Mode",
+          "value": "NOMINAL"
+        }
+      ],
+      "comment": "NOMINALモードへ。Queues で承認するまで、ここで止まる"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/Bus/Mode",
+          "operator": "eq",
+          "value": "NOMINAL"
+        }
+      ],
+      "timeout": 5000,
+      "comment": "HKでNOMINALになったことを確かめる"
+    },
+    {
+      "type": "command",
+      "name": "/M5Sat/Bus/PAYLOAD_POWER",
+      "advancement": {
+        "acknowledgment": "CommandComplete"
+      },
+      "arguments": [
+        {
+          "name": "State",
+          "value": "OFF"
+        }
+      ],
+      "comment": "ペイロードの電源を切る"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/Bus/PayloadPower",
+          "operator": "eq",
+          "value": false
+        }
+      ],
+      "timeout": 5000,
+      "comment": "HKでペイロードがOFFになったことを確かめる"
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "steps": [
+    {
+      "type": "text",
+      "text": "## 観測開始\n\nペイロード（GNSS受信機）の電源を入れ、MISSIONモードで観測を始める。\n\n`SET_MODE` は critical なので、途中で **Commanding → Queues** での承認が必要になる。"
+    },
+    {
+      "type": "check",
+      "parameters": [
+        {
+          "parameter": "/M5Sat/Bus/Mode"
+        },
+        {
+          "parameter": "/M5Sat/Bus/PayloadPower"
+        },
+        {
+          "parameter": "/M5Sat/Bus/FdirEnabled"
+        }
+      ],
+      "comment": "NOMINALで、FDIRが有効であることを確かめる"
+    },
+    {
+      "type": "command",
+      "name": "/M5Sat/Bus/PAYLOAD_POWER",
+      "advancement": {
+        "acknowledgment": "CommandComplete"
+      },
+      "arguments": [
+        {
+          "name": "State",
+          "value": "ON"
+        }
+      ],
+      "comment": "ペイロードの電源を入れる（すでにONなら何も起きない）"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/Bus/PayloadPower",
+          "operator": "eq",
+          "value": true
+        }
+      ],
+      "timeout": 5000,
+      "comment": "HKでペイロードがONになったことを確かめる"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/GNSS/TimeValid",
+          "operator": "eq",
+          "value": true
+        }
+      ],
+      "timeout": 35000,
+      "comment": "GNSSのデータが届き始めたことを確かめる（電源を入れてから動き出すまで最大30秒）"
+    },
+    {
+      "type": "command",
+      "name": "/M5Sat/Bus/SET_MODE",
+      "advancement": {
+        "acknowledgment": "CommandComplete"
+      },
+      "arguments": [
+        {
+          "name": "Mode",
+          "value": "MISSION"
+        }
+      ],
+      "comment": "MISSIONモードへ。Queues で承認するまで、ここで止まる"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/Bus/Mode",
+          "operator": "eq",
+          "value": "MISSION"
+        }
+      ],
+      "timeout": 5000,
+      "comment": "HKでMISSIONになったことを確かめる"
+    },
+    {
+      "type": "check",
+      "parameters": [
+        {
+          "parameter": "/M5Sat/GNSS/TrackedCount"
+        },
+        {
+          "parameter": "/M5Sat/GNSS/AverageCn0"
+        }
+      ],
+      "comment": "観測データ（APID 104）が届き始めたことを確かめる"
+    }
+  ]
+}
