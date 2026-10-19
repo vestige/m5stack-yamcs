@@ -1,0 +1,24 @@
+{
+  "$schema": "https://yamcs.org/schema/parameter-table.schema.json",
+  "scroll": false,
+  "parameters": [
+    "/M5Sat/Bus/Mode",
+    "/M5Sat/Bus/PayloadPower",
+    "/M5Sat/Bus/FdirEnabled",
+    "/M5Sat/Bus/LastFault",
+    "/M5Sat/Bus/FaultCount",
+    "/M5Sat/Bus/ObservationState",
+    "/M5Sat/Bus/ObservationStart",
+    "/M5Sat/Bus/ObservationDuration",
+    "/M5Sat/Bus/AcceptedCommands",
+    "/M5Sat/Bus/RejectedCommands",
+    "/M5Sat/Bus/LastCommandId",
+    "/M5Sat/Bus/OnboardTime",
+    "/M5Sat/Bus/Uptime",
+    "/M5Sat/Bus/BootCount",
+    "/M5Sat/Bus/ResetReason",
+    "/M5Sat/Bus/WifiRssi",
+    "/M5Sat/Bus/FreeHeap",
+    "/M5Sat/Bus/MinFreeHeap"
+  ]
+}

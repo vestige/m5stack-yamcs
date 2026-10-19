@@ -268,6 +268,8 @@
 			<ContainerSet>
 				<!-- APID 101: HK (offset 6 以降) -->
 				<SequenceContainer name="Housekeeping">
+					<!-- 最低でも10秒に1回は届く (SET_TM_INTERVAL の上限)。届かなくなると約19秒 (10秒 × 1.9) で値が期限切れ (EXPIRED) になる -->
+					<DefaultRateInStream basis="perSecond" minimumValue="0.1" />
 					<EntryList>
 						<ParameterRefEntry parameterRef="Mode" />
 						<ParameterRefEntry parameterRef="PayloadPower" />
@@ -912,6 +914,8 @@ switch (severity.value) {
 			<ContainerSet>
 				<!-- APID 100: GNSSテレメトリ (offset 6 以降) -->
 				<SequenceContainer name="GnssTelemetry">
+					<!-- ペイロードがONの間は HK と同じ周期で届く。ペイロードを切ったり通信が途切れたりすると、約19秒で期限切れになる -->
+					<DefaultRateInStream basis="perSecond" minimumValue="0.1" />
 					<EntryList>
 						<ParameterRefEntry parameterRef="UtcTime" />
 						<ParameterRefEntry parameterRef="UtcMillisecond" />
@@ -944,6 +948,8 @@ switch (severity.value) {
 
 				<!-- APID 104: 観測データ (MISSIONモードのときだけ届く) -->
 				<SequenceContainer name="Observation">
+					<!-- MISSIONの間は HK と同じ周期で届く。MISSIONを抜けたり通信が途切れたりすると、約19秒で期限切れになる -->
+					<DefaultRateInStream basis="perSecond" minimumValue="0.1" />
 					<EntryList>
 						<ParameterRefEntry parameterRef="ObservationTime" />
 						<ParameterRefEntry parameterRef="ObservedCount" />
