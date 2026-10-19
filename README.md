@@ -621,17 +621,48 @@ ACK（最後のACK・段階・理由）は、コマンドを送ったときだ�
 
 **運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-8) を見てください。
 
-#### 5-9 Timeline とパス運用
+#### 5-9 Timeline とパス運用 ✅
 
-YAMCSのTimelineに運用計画を書き込みます。
+衛星と通信できる時間（パス）が限られている状況を再現し、YAMCSの **Timeline** で運用を計画して進めます。
 
-- 通信できる時間帯（パス）
-- 観測の予定（5-6の時刻指定コマンドと対応させる）
-- 運用モードを切り替える予定
+**パスの計画**：本物の運用では、衛星の軌道と地上局の場所からパスの時刻を予測します。M5Satは軌道を回っていないので、[tools/plan_passes.py](tools/plan_passes.py) で決まった間隔の人工のパスを作ります。
 
-パスの時間だけデータリンクを有効にして、衛星と通信できる時間が限られている状況を再現します。パスが終わったら、Archive browserで残ったデータと計画を時間軸の上で照らし合わせて振り返ります。
+```sh
+python3 tools/plan_passes.py create                 # 1分後から、10分ごとに2分間のパスを3回
+python3 tools/plan_passes.py create --passes 5 --interval 6 --duration 2
+python3 tools/plan_passes.py list                   # 計画と、アクティビティの実行状況
+python3 tools/plan_passes.py clear                  # これからの予定を消し、常時通信に戻す (終わった予定は振り返り用に残す)
+python3 tools/plan_passes.py clear --all            # 終わった予定も含めて全部消す
+```
 
-**運用シナリオ**（予定）：[docs/scenarios.md](docs/scenarios.md#planned) を見てください。
+Timelineには次の予定を作ります。予定・帯・ビューはYAMCSのデータベースに保存されてgitで管理できないので、このスクリプトで作り直せるようにしています。
+
+| 予定 | 種類 | 中身 |
+| --- | --- | --- |
+| パス | イベント | 通信できる時間帯 |
+| AOS | アクティビティ（スクリプト） | パスの始めに、TM・TCのデータリンクを有効にする。テレメトリが実際に届き始めたら成功（15秒届かなければ失敗） |
+| 通信の確認 | アクティビティ（スタック） | AOSが成功したら、5-7の `01-link-check.ycs` を自動で実行する |
+| LOS | アクティビティ（スクリプト） | パスの終わりに、データリンクを無効にする。パスの外では衛星と通信できない |
+| 観測の予定 | イベント | パスとパスの間の観測。パスの間に、運用者が `SCHEDULE_OBSERVATION` で予約する（説明欄に引数を書いてある） |
+
+データリンクの切り替えは [yamcs/src/main/yamcs/etc/scripts/set_links.py](yamcs/src/main/yamcs/etc/scripts/set_links.py) で行い、`yamcs.gnss.yaml` でTimelineのサービスと、スクリプトのアクティビティ（`.py` を `python3` で動かす）を設定しています。
+
+ビュー「パス運用」には、時刻の目盛（UTC と日本時間）、パス、通信と手順、観測の予定、送ったコマンド、運用モード・観測の状態・最後の観測の結果・ペイロード電源の移り変わりを並べます。パスの外は衛星の状態の帯が途切れるので、いつ通信できていたかが一目でわかります。
+
+**最後の観測の結果をHKに残す**：観測はパスとパスの間（通信できない間）に行われるので、その間のイベントや観測データは地上に届きません。そこで、衛星が最後の観測の結果を覚えておき、HKで送り続けるようにしました（HKのパケットは53バイトになりました）。次のパスでHKを見れば、観測がどうなったかがわかります。
+
+| Offset | Size | 型 | パラメータ | 内容 |
+| --- | --- | --- | --- | --- |
+| 44 | 1 | uint8 | `LastObservationResult` | 0=NONE, 1=COMPLETED（完了）, 2=ABORTED（中断）, 3=SKIPPED_PAYLOAD_OFF, 4=SKIPPED_NOT_NOMINAL（見送り）, 5=CANCELLED（取り消し） |
+| 45 | 4 | uint32 | `LastObservationStart` | 実際に始めた時刻（見送り・開始前の取り消しは予約の時刻） |
+| 49 | 2 | uint16 | `LastObservationLength` | 実際に観測した長さ（秒） |
+| 51 | 2 | uint16 | `CompletedObservations` | 完了した観測の回数 |
+
+中断・見送りのときは警告のアラームが上がるので、次のパスの始めに気づけます。値は衛星のRAMにあり、再起動すると消えます（再起動したことは、再起動の回数でわかります）。
+
+通信できない間のイベントや観測データそのものを衛星の中に記録し、パスで降ろす（ダンプ）のは、[issue #34](https://github.com/vestige/m5stack-yamcs/issues/34) で扱います。
+
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-9) を見てください。
 
 #### 5-10 異常対応の訓練
 

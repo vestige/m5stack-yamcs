@@ -591,6 +591,67 @@ void test_fill_housekeeping_observation() {
   TEST_ASSERT_EQUAL_UINT16(180, hk.observationDuration);
 }
 
+// 観測の結果は、通信できない間に観測しても次のパスでわかるよう、HKに残る
+HousekeepingPacket::Housekeeping housekeeping(const Satellite& sat) {
+  HousekeepingPacket::Housekeeping hk;
+  sat.fillHousekeeping(&hk);
+  return hk;
+}
+
+void test_last_observation_completed() {
+  Satellite sat = syncedSatellite();
+  TEST_ASSERT_TRUE(housekeeping(sat).lastObservationResult == Satellite::ObservationResult::None);
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 300, 180));
+  advance(sat, 1000 + 302000);  // 2秒遅れて始まった
+  advance(sat, 1000 + 482000);
+  HousekeepingPacket::Housekeeping hk = housekeeping(sat);
+  TEST_ASSERT_TRUE(hk.lastObservationResult == Satellite::ObservationResult::Completed);
+  TEST_ASSERT_EQUAL_UINT32(kUtc + 302, hk.lastObservationStart);  // 実際に始めた時刻
+  TEST_ASSERT_EQUAL_UINT16(180, hk.lastObservationLength);
+  TEST_ASSERT_EQUAL_UINT16(1, hk.completedObservations);
+  TEST_ASSERT_TRUE(hk.observationState == Satellite::ObservationState::None);  // 観測の状態は戻る
+}
+
+void test_last_observation_skipped() {
+  Satellite sat = syncedSatellite();
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 60, 60));
+  send(sat, CommandId::PayloadPower, {0});
+  sat.updateObservation(1000 + 60000);
+  HousekeepingPacket::Housekeeping hk = housekeeping(sat);
+  TEST_ASSERT_TRUE(hk.lastObservationResult == Satellite::ObservationResult::SkippedPayloadOff);
+  TEST_ASSERT_EQUAL_UINT32(kUtc + 60, hk.lastObservationStart);  // 予約の時刻
+  TEST_ASSERT_EQUAL_UINT16(0, hk.lastObservationLength);
+  TEST_ASSERT_EQUAL_UINT16(0, hk.completedObservations);
+
+  send(sat, CommandId::PayloadPower, {1});
+  send(sat, CommandId::SetMode, {2});  // MISSION
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 120, 60));
+  advance(sat, 1000 + 120000);
+  TEST_ASSERT_TRUE(housekeeping(sat).lastObservationResult == Satellite::ObservationResult::SkippedNotNominal);
+}
+
+void test_last_observation_aborted_and_cancelled() {
+  Satellite sat = syncedSatellite();
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 10, 600));
+  advance(sat, 1000 + 10000);
+  send(sat, CommandId::SetMode, {1});  // 観測中に NOMINAL へ戻す
+  advance(sat, 1000 + 40000);
+  HousekeepingPacket::Housekeeping hk = housekeeping(sat);
+  TEST_ASSERT_TRUE(hk.lastObservationResult == Satellite::ObservationResult::Aborted);
+  TEST_ASSERT_EQUAL_UINT32(kUtc + 10, hk.lastObservationStart);
+  TEST_ASSERT_EQUAL_UINT16(30, hk.lastObservationLength);
+
+  send(sat, CommandId::ScheduleObservation, scheduleArgs(kUtc + 100, 60));
+  advance(sat, 1000 + 100000);
+  advance(sat, 1000 + 120000);
+  send(sat, CommandId::CancelObservation);  // 観測中に取り消す
+  hk = housekeeping(sat);
+  TEST_ASSERT_TRUE(hk.lastObservationResult == Satellite::ObservationResult::Cancelled);
+  TEST_ASSERT_EQUAL_UINT32(kUtc + 100, hk.lastObservationStart);
+  TEST_ASSERT_EQUAL_UINT16(20, hk.lastObservationLength);
+  TEST_ASSERT_EQUAL_UINT16(0, hk.completedObservations);
+}
+
 void test_observation_packet() {
   SatelliteInfo sats[3];
   sats[0].system = GnssSystem::QZSS;
@@ -680,6 +741,9 @@ int main(int, char**) {
   RUN_TEST(test_observation_interrupted_by_fdir);
   RUN_TEST(test_cancel_observation);
   RUN_TEST(test_fill_housekeeping_observation);
+  RUN_TEST(test_last_observation_completed);
+  RUN_TEST(test_last_observation_skipped);
+  RUN_TEST(test_last_observation_aborted_and_cancelled);
   RUN_TEST(test_observation_packet);
   RUN_TEST(test_observation_packet_limits_satellites);
   RUN_TEST(test_ack_packet);

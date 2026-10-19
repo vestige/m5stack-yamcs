@@ -19,6 +19,16 @@ services:
       realtimeFiller:
         enabled: true
   - class: org.yamcs.plists.ParameterListService
+  # Timeline (5-9)。パスや観測の予定を時間軸に並べ、予定の時刻にアクティビティ (スクリプトやスタック) を自動で始める
+  - class: org.yamcs.timeline.TimelineService
+
+# アクティビティ (Timeline や Procedures から実行するもの) の設定
+activities:
+  # スクリプトは etc/scripts/ から探す。.py は python3 で動かす
+  # (YAMCS_URL, YAMCS_INSTANCE などの環境変数が渡される)
+  scriptExecution:
+    fileAssociations:
+      py: python3 -u
 
 dataLinks:
   # M5Stackから届くGNSSテレメトリ (CCSDS Space Packet, lib/TelemetryPacket)

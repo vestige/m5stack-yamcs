@@ -15,6 +15,7 @@ class Satellite {
   using OperationMode = HousekeepingPacket::OperationMode;
   using Fault = HousekeepingPacket::Fault;
   using ObservationState = HousekeepingPacket::ObservationState;
+  using ObservationResult = HousekeepingPacket::ObservationResult;
 
   static const uint16_t kMinTmIntervalMs = 200;
   static const uint16_t kMaxTmIntervalMs = 10000;
@@ -69,6 +70,7 @@ class Satellite {
   uint16_t faultCount() const { return faultCount_; }
   const OnboardClock& clock() const { return clock_; }
   ObservationState observationState() const { return observationState_; }
+  ObservationResult lastObservationResult() const { return lastObservationResult_; }
 
   // HKのうちバスの状態に関する項目を埋める
   void fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const;
@@ -83,6 +85,8 @@ class Satellite {
   void reportInfo(EventPacket::EventId id, uint16_t arg1 = 0, uint16_t arg2 = 0);
   void handleFault(Fault fault, uint16_t durationSec);
   void endObservation(bool completed);
+  // 最後の観測の結果を覚える (HKで送り続ける)
+  void recordObservation(ObservationResult result, uint32_t startSec, uint32_t endSec);
 
   OperationMode mode_ = OperationMode::Nominal;
   bool payloadPower_ = true;
@@ -104,6 +108,12 @@ class Satellite {
   ObservationState observationState_ = ObservationState::None;
   uint32_t observationStart_ = 0;
   uint16_t observationDuration_ = 0;
+  // 観測を実際に始めた時刻 (Unix秒)
+  uint32_t observationStartedSec_ = 0;
+  ObservationResult lastObservationResult_ = ObservationResult::None;
+  uint32_t lastObservationStart_ = 0;
+  uint16_t lastObservationLength_ = 0;
+  uint16_t completedObservations_ = 0;
 
   EventQueue events_;
 };

@@ -19,13 +19,13 @@ void test_primary_header() {
   HousekeepingPacket::Housekeeping hk;
   uint8_t buf[HousekeepingPacket::kPacketSize];
   size_t n = HousekeepingPacket::encode(hk, 7, buf, sizeof(buf));
-  TEST_ASSERT_EQUAL(44, n);
+  TEST_ASSERT_EQUAL(53, n);
 
   // version=0, type=TM, secondary header=0, APID=101
   TEST_ASSERT_EQUAL_HEX16(0x0065, readU16(buf));
   TEST_ASSERT_EQUAL_HEX16(0xC007, readU16(buf + 2));
-  // データ部38バイト → length=37
-  TEST_ASSERT_EQUAL_UINT16(37, readU16(buf + 4));
+  // データ部47バイト → length=46
+  TEST_ASSERT_EQUAL_UINT16(46, readU16(buf + 4));
 }
 
 void test_payload() {
@@ -48,6 +48,10 @@ void test_payload() {
   hk.observationState = HousekeepingPacket::ObservationState::Scheduled;
   hk.observationStart = 1791166725;
   hk.observationDuration = 180;
+  hk.lastObservationResult = HousekeepingPacket::ObservationResult::Aborted;
+  hk.lastObservationStart = 1791166125;
+  hk.lastObservationLength = 75;
+  hk.completedObservations = 260;
 
   uint8_t buf[HousekeepingPacket::kPacketSize];
   HousekeepingPacket::encode(hk, 0, buf, sizeof(buf));
@@ -70,6 +74,10 @@ void test_payload() {
   TEST_ASSERT_EQUAL_UINT8(1, buf[37]);
   TEST_ASSERT_EQUAL_UINT32(1791166725, readU32(buf + 38));
   TEST_ASSERT_EQUAL_UINT16(180, readU16(buf + 42));
+  TEST_ASSERT_EQUAL_UINT8(2, buf[44]);
+  TEST_ASSERT_EQUAL_UINT32(1791166125, readU32(buf + 45));
+  TEST_ASSERT_EQUAL_UINT16(75, readU16(buf + 49));
+  TEST_ASSERT_EQUAL_UINT16(260, readU16(buf + 51));
 }
 
 void test_defaults() {
@@ -81,6 +89,7 @@ void test_defaults() {
   TEST_ASSERT_EQUAL_UINT8(1, buf[7]);
   TEST_ASSERT_EQUAL_UINT8(1, buf[29]);  // FDIRは起動時に有効
   TEST_ASSERT_EQUAL_UINT8(0, buf[30]);  // 異常なし
+  TEST_ASSERT_EQUAL_UINT8(0, buf[44]);  // まだ観測していない
 }
 
 void test_buffer_too_small() {
