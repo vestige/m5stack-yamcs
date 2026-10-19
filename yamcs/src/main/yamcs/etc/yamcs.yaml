@@ -11,5 +11,12 @@ dataDir: yamcs-data
 instances:
   - gnss
 
+# コマンドスタック (Procedures → Stacks) の置き場所。
+# リポジトリの yamcs/src/main/yamcs/stacks/ をそのまま使うので、gitで管理でき、
+# Web UIで編集した内容もこのフォルダのファイルに残る (パスは yamcs:run の作業フォルダ target/yamcs から見たもの)
+buckets:
+  - name: stacks
+    path: ../../src/main/yamcs/stacks
+
 # 署名などに使う、このYAMCSサーバ固有の秘密鍵 (ローカルでの学習用)
 secretKey: changeme

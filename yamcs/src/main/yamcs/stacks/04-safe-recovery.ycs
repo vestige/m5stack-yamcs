@@ -1,0 +1,103 @@
+{
+  "steps": [
+    {
+      "type": "text",
+      "text": "## SAFEからの復旧\n\nFDIRなどでSAFEへ退避した衛星を、NOMINALに戻してペイロードを入れ直す。\n\n始める前に:\n\n1. **Alarms** でアラームを確認（Acknowledge）する\n2. **Events** の `FAULT_DETECTED` で、何が起きたかを確かめる\n3. 原因を直す（例: GPSユニットのケーブルを戻す）"
+    },
+    {
+      "type": "check",
+      "parameters": [
+        {
+          "parameter": "/M5Sat/Bus/Mode"
+        },
+        {
+          "parameter": "/M5Sat/Bus/PayloadPower"
+        },
+        {
+          "parameter": "/M5Sat/Bus/LastFault"
+        },
+        {
+          "parameter": "/M5Sat/Bus/FaultCount"
+        }
+      ],
+      "comment": "SAFEで、ペイロードがOFFになっていること、最後の異常の種類を確かめる"
+    },
+    {
+      "type": "command",
+      "name": "/M5Sat/Bus/SET_MODE",
+      "advancement": {
+        "acknowledgment": "CommandComplete"
+      },
+      "arguments": [
+        {
+          "name": "Mode",
+          "value": "NOMINAL"
+        }
+      ],
+      "comment": "NOMINALモードへ。Queues で承認するまで、ここで止まる"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/Bus/Mode",
+          "operator": "eq",
+          "value": "NOMINAL"
+        }
+      ],
+      "timeout": 5000,
+      "comment": "HKでNOMINALになったことを確かめる（SAFEのままだと、次の PAYLOAD_POWER は地上で止められる）"
+    },
+    {
+      "type": "command",
+      "name": "/M5Sat/Bus/PAYLOAD_POWER",
+      "advancement": {
+        "acknowledgment": "CommandComplete"
+      },
+      "arguments": [
+        {
+          "name": "State",
+          "value": "ON"
+        }
+      ],
+      "comment": "ペイロードの電源を入れる"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/Bus/PayloadPower",
+          "operator": "eq",
+          "value": true
+        }
+      ],
+      "timeout": 5000,
+      "comment": "HKでペイロードがONになったことを確かめる"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/GNSS/TimeValid",
+          "operator": "eq",
+          "value": true
+        }
+      ],
+      "timeout": 35000,
+      "comment": "GNSSのデータが届き始めたことを確かめる。時間切れなら原因が直っていない（30秒後にFDIRがまた退避させる）"
+    },
+    {
+      "type": "verify",
+      "condition": [
+        {
+          "parameter": "/M5Sat/Bus/Mode",
+          "operator": "eq",
+          "value": "NOMINAL"
+        }
+      ],
+      "timeout": 5000,
+      "delay": 35000,
+      "comment": "35秒待っても NOMINAL のままなら、復旧できている（FDIRが再び退避していない）"
+    }
+  ]
+}

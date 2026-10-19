@@ -567,17 +567,29 @@ HKには、観測の状態を表す項目を追加しました（HKのパケッ�
 
 **運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-6) を見てください。
 
-#### 5-7 運用手順（コマンドスタック）
+#### 5-7 運用手順（コマンドスタック） ✅
 
-決まった作業の手順を、複数のコマンドを順番に並べたコマンドスタックとして用意します。本物の運用での手順書の役割です。
+決まった作業の手順を、YAMCSのコマンドスタック（Procedures → Stacks）として用意しました。本物の運用での手順書の役割です。
 
-| 手順 | 内容 |
+| スタック | 手順 |
 | --- | --- |
-| 観測開始 | `PAYLOAD_POWER ON` → ペイロードの状態を確認 → `SET_MODE MISSION` |
-| 観測終了 | `SET_MODE NOMINAL` → `PAYLOAD_POWER OFF` |
-| SAFEからの復旧 | 状態を確認 → `RESET_COUNTERS` → `SET_MODE NOMINAL` |
+| `01-link-check.ycs`（通信の確認） | HKを確認 → `NO_OP` → 受理数と最後のコマンドを確認 |
+| `02-observation-start.ycs`（観測開始） | 状態を確認 → `PAYLOAD_POWER ON` → ペイロードONを待つ → GNSSのデータを待つ → `SET_MODE MISSION`（承認） → MISSIONを待つ → 観測データを確認 |
+| `03-observation-end.ycs`（観測終了） | 状態を確認 → `SET_MODE NOMINAL`（承認） → NOMINALを待つ → `PAYLOAD_POWER OFF` → OFFを待つ |
+| `04-safe-recovery.ycs`（SAFEからの復旧） | 始める前の確認 → 状態と異常の種類を確認 → `SET_MODE NOMINAL`（承認） → NOMINALを待つ → `PAYLOAD_POWER ON` → GNSSのデータを待つ → 再び退避していないか確かめる |
 
-**運用シナリオ**（予定）：[docs/scenarios.md](docs/scenarios.md#planned) を見てください。
+スタックは `.ycs`（JSON）のファイルで、[yamcs/src/main/yamcs/stacks/](yamcs/src/main/yamcs/stacks/) に置いています。`yamcs.yaml` の `buckets` で、このフォルダをそのままYAMCSの `stacks` バケットにしているので、gitで管理でき、Web UIで編集した内容もこのファイルに残ります。
+
+| ステップ | 使い方 |
+| --- | --- |
+| `text` | 手順の説明（Markdown） |
+| `check` | パラメータの今の値を表示して、運用者に確かめさせる |
+| `command` | コマンドを送る。すべて `advancement` を `CommandComplete` にしていて、Command Verificationが完了するまで次へ進まない。critical のコマンドは、Queuesで承認されるまでここで止まる |
+| `verify` | テレメトリが条件を満たすまで待つ。時間切れになると、スタックはそこで止まる |
+
+`verify` で「コマンドの結果がHKに出るのを待ってから次を送る」（5-5を参照）を手順に組み込んでいます。手順書を使う理由は [docs/real-operations.md](docs/real-operations.md#procedures) にまとめています。
+
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-7) を見てください。
 
 #### 5-8 運用画面
 

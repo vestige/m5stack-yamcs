@@ -1,0 +1,46 @@
+{
+  "steps": [
+    {
+      "type": "text",
+      "text": "## 通信の確認\n\nパスの始めに、衛星と地上の間でテレメトリとコマンドがやり取りできることを確かめる。"
+    },
+    {
+      "type": "check",
+      "parameters": [
+        {
+          "parameter": "/M5Sat/Bus/Mode"
+        },
+        {
+          "parameter": "/M5Sat/Bus/PayloadPower"
+        },
+        {
+          "parameter": "/M5Sat/Bus/Uptime"
+        },
+        {
+          "parameter": "/M5Sat/Bus/OnboardTime"
+        }
+      ],
+      "comment": "HKが届いていて、値が1秒ごとに更新されていることを確かめる"
+    },
+    {
+      "type": "command",
+      "name": "/M5Sat/Bus/NO_OP",
+      "advancement": {
+        "acknowledgment": "CommandComplete"
+      },
+      "comment": "通信路の確認。Accepted → Complete まで進めば、コマンドも届いている"
+    },
+    {
+      "type": "check",
+      "parameters": [
+        {
+          "parameter": "/M5Sat/Bus/AcceptedCommands"
+        },
+        {
+          "parameter": "/M5Sat/Bus/LastCommandId"
+        }
+      ],
+      "comment": "受理したコマンド数が増え、最後のコマンドが NO_OP になっていることを確かめる"
+    }
+  ]
+}
