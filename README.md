@@ -295,7 +295,7 @@ M5Stackを1機の衛星に見立てて、YAMCSを地上局として運用する�
 | 5-5 | コマンドの安全装置 | Mission database, Commanding（Queues） |
 | 5-6 | ペイロード運用と観測データ | Telemetry, Commanding |
 | 5-7 | 運用手順（コマンドスタック） | Procedures（Stacks） |
-| 5-8 | 運用画面 | Parameter lists, Displays |
+| 5-8 | 運用画面 | Displays（OPI、Parameter Table） |
 | 5-9 | Timeline とパス運用 | Timeline, Links, Archive browser |
 | 5-10 | 異常対応の訓練 | Alarms, Events, Command history |
 
@@ -591,11 +591,35 @@ HKには、観測の状態を表す項目を追加しました（HKのパケッ�
 
 **運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-7) を見てください。
 
-#### 5-8 運用画面
+#### 5-8 運用画面 ✅
 
-運用者が1画面で衛星の状態を把握できるよう、モード・ペイロードの状態・アラーム・コマンドカウンタ・GNSSの状態をまとめた画面を、Parameter listsとDisplaysで作ります。
+運用者がパス中に1画面で衛星の状態をつかめるよう、YAMCSの **Telemetry → Displays** に運用画面を置きました。長い期間のトレンドを見るのは Grafana（#21）の役目で、こちらは「いまの状態」を見て次のコマンドを判断するための画面です。
 
-**運用シナリオ**（予定）：[docs/scenarios.md](docs/scenarios.md#planned) を見てください。
+| 画面 | 形式 | 中身 |
+| --- | --- | --- |
+| `m5sat-overview.opi` | OPI（CS-Studio / Yamcs Studio の画面形式） | 衛星の状態、コマンド、FDIR、観測、GNSS、位置の区画と、コマンドのボタン |
+| `m5sat-hk.par` | Parameter Table | HKのパラメータの表。Web UIから項目を足し引きして保存できる |
+
+画面のファイルは [yamcs/src/main/yamcs/displays/](yamcs/src/main/yamcs/displays/) に置き、5-7のスタックと同じく `yamcs.yaml` の `buckets` で `displays` バケットにしています。Parameter lists（Telemetry → Parameter lists）はYAMCSのデータベースに保存されてgitで管理できないので、同じ役目を Parameter Table（`.par`）で持たせています。
+
+運用画面の工夫：
+
+- 運用モードは背景の色（NOMINAL 緑 / MISSION 青 / SAFE 黄）で見分ける。OPIのルール（`pvStr0=="SAFE"` など）で色を変えている。期限切れは、周りの太い枠が紫になることで目立たせる
+- ペイロード電源とFDIRは ON/OFF のランプにする
+- 値の枠はアラームに合わせて色が変わる（警告はオレンジ、重大は赤。SAFE、測位できていない など）
+- ボタン（`NO_OP`、`PAYLOAD_POWER`、`SET_MODE`、`SET_FDIR`）は確認ダイアログを出してから送る。`SET_MODE` はボタンから送っても5-5の待ち行列に入る
+
+**テレメトリが途切れたことに気づく**：MDBの HK・GNSS・観測データのコンテナに、最低限届く頻度（`DefaultRateInStream`、10秒に1回）を書きました。届かなくなると、約19秒（10秒 × 1.9）で値が期限切れ（`EXPIRED`）になり、運用画面の値が紫になります。これがないと、衛星が止まっても最後の値が表示されたままで、通信が途切れたことに気づけません。
+
+| 状況 | 期限切れになる値 |
+| --- | --- |
+| 衛星の電源が切れた・通信が途切れた | すべて |
+| ペイロードをOFFにした | GNSSの値 |
+| MISSIONを抜けた | 観測データの値 |
+
+ACK（最後のACK・段階・理由）は、コマンドを送ったときだけ届くパケットなので、期限を付けていません。コマンドを送らなければ届かないのが正常だからです。
+
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-8) を見てください。
 
 #### 5-9 Timeline とパス運用
 

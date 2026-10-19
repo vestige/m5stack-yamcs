@@ -17,6 +17,9 @@ instances:
 buckets:
   - name: stacks
     path: ../../src/main/yamcs/stacks
+  # 運用画面 (Telemetry → Displays) の置き場所。stacks と同じく yamcs/src/main/yamcs/displays/ をそのまま使う
+  - name: displays
+    path: ../../src/main/yamcs/displays
 
 # 署名などに使う、このYAMCSサーバ固有の秘密鍵 (ローカルでの学習用)
 secretKey: changeme

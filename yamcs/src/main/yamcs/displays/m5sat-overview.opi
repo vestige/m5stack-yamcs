@@ -1,0 +1,2567 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  M5Sat の運用画面 (5-8)。YAMCS の Telemetry → Displays で開く。
+  CS-Studio (Yamcs Studio) の OPI 形式。値の欄をクリックするとそのパラメータの詳細へ移る
+-->
+<display typeId="org.csstudio.opibuilder.Display" version="1.0.0">
+  <name>M5Sat 運用画面</name>
+  <wuid>root</wuid>
+  <x>0</x>
+  <y>0</y>
+  <width>1070</width>
+  <height>552</height>
+  <background_color><color red="236" green="239" blue="242" /></background_color>
+  <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+  <actions hook="false" hook_all="false" />
+  <rules />
+  <scripts />
+  <macros><include_parent_macros>true</include_parent_macros></macros>
+  <show_grid>false</show_grid>
+  <show_edit_range>true</show_edit_range>
+  <auto_zoom_to_fit_all>false</auto_zoom_to_fit_all>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>M5Sat 運用画面</name>
+    <wuid>w1</wuid>
+    <x>20</x>
+    <y>12</y>
+    <width>400</width>
+    <height>30</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>M5Sat 運用画面</text>
+    <font><opifont.name fontName="Liberation Sans" height="18" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="40" green="60" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>枠がオレンジ・赤はアラーム、紫はテレメトリが途切れた (期限切れ) ことを表す。値をクリックするとパラメータの詳細へ移る</name>
+    <wuid>w2</wuid>
+    <x>20</x>
+    <y>42</y>
+    <width>1000</width>
+    <height>20</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>枠がオレンジ・赤はアラーム、紫はテレメトリが途切れた (期限切れ) ことを表す。値をクリックするとパラメータの詳細へ移る</text>
+    <font><opifont.name fontName="Liberation Sans" height="9" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
+    <widget_type>Rectangle</widget_type>
+    <name>衛星の状態</name>
+    <wuid>w3</wuid>
+    <x>20</x>
+    <y>72</y>
+    <width>340</width>
+    <height>352</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <line_color><color red="180" green="186" blue="194" /></line_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>0</border_width>
+    <line_width>1</line_width>
+    <line_style>0</line_style>
+    <alpha>255</alpha>
+    <transparent>false</transparent>
+    <gradient>false</gradient>
+    <fill_level>0.0</fill_level>
+    <horizontal_fill>true</horizontal_fill>
+    <bg_gradient_color><color red="255" green="255" blue="255" /></bg_gradient_color>
+    <fg_gradient_color><color red="255" green="255" blue="255" /></fg_gradient_color>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>衛星の状態</name>
+    <wuid>w4</wuid>
+    <x>30</x>
+    <y>78</y>
+    <width>320</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>衛星の状態</text>
+    <font><opifont.name fontName="Liberation Sans" height="12" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="40" green="60" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>運用モード</name>
+    <wuid>w5</wuid>
+    <x>30</x>
+    <y>108</y>
+    <width>120</width>
+    <height>34</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>運用モード</text>
+    <font><opifont.name fontName="Liberation Sans" height="11" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
+    <widget_type>Rectangle</widget_type>
+    <name>/M5Sat/Bus/Mode frame</name>
+    <wuid>w6</wuid>
+    <x>145</x>
+    <y>103</y>
+    <width>210</width>
+    <height>44</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/Mode</pv_name>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <line_color><color red="255" green="255" blue="255" /></line_color>
+    <border_color><color red="255" green="255" blue="255" /></border_color>
+    <border_style>0</border_style>
+    <border_width>0</border_width>
+    <border_alarm_sensitive>false</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <line_width>0</line_width>
+    <line_style>0</line_style>
+    <alpha>255</alpha>
+    <transparent>false</transparent>
+    <gradient>false</gradient>
+    <fill_level>0.0</fill_level>
+    <horizontal_fill>true</horizontal_fill>
+    <bg_gradient_color><color red="255" green="255" blue="255" /></bg_gradient_color>
+    <fg_gradient_color><color red="255" green="255" blue="255" /></fg_gradient_color>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/Mode</name>
+    <wuid>w7</wuid>
+    <x>150</x>
+    <y>108</y>
+    <width>200</width>
+    <height>34</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules><rule name="mode color" prop_id="background_color" out_exp="false"><exp bool_exp="pvStr0==&quot;SAFE&quot;"><value><color red="250" green="200" blue="80" /></value></exp><exp bool_exp="pvStr0==&quot;NOMINAL&quot;"><value><color red="200" green="235" blue="205" /></value></exp><exp bool_exp="pvStr0==&quot;MISSION&quot;"><value><color red="190" green="215" blue="250" /></value></exp><pv trig="true">/M5Sat/Bus/Mode</pv></rule></rules>
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/Mode</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="16" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>false</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>ペイロード電源</name>
+    <wuid>w8</wuid>
+    <x>30</x>
+    <y>150</y>
+    <width>120</width>
+    <height>26</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>ペイロード電源</text>
+    <font><opifont.name fontName="Liberation Sans" height="11" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.LED" version="1.0.0">
+    <widget_type>LED</widget_type>
+    <name>/M5Sat/Bus/PayloadPower</name>
+    <wuid>w9</wuid>
+    <x>150</x>
+    <y>150</y>
+    <width>110</width>
+    <height>26</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/PayloadPower</pv_name>
+    <font><opifont.name fontName="Liberation Sans" height="11" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="255" green="255" blue="255" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>false</backcolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <data_type>0</data_type>
+    <bit>-1</bit>
+    <effect_3d>false</effect_3d>
+    <square_led>true</square_led>
+    <show_boolean_label>true</show_boolean_label>
+    <bulb_border>1</bulb_border>
+    <bulb_border_color><color red="150" green="150" blue="150" /></bulb_border_color>
+    <on_label>ON</on_label>
+    <off_label>OFF</off_label>
+    <on_state></on_state>
+    <off_state></off_state>
+    <on_color><color red="40" green="170" blue="70" /></on_color>
+    <off_color><color red="110" green="115" blue="125" /></off_color>
+    <state_color_fallback><color red="200" green="200" blue="200" /></state_color_fallback>
+    <state_label_fallback>?</state_label_fallback>
+    <state_count>2</state_count>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>FDIR</name>
+    <wuid>w10</wuid>
+    <x>30</x>
+    <y>182</y>
+    <width>120</width>
+    <height>26</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>FDIR</text>
+    <font><opifont.name fontName="Liberation Sans" height="11" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.LED" version="1.0.0">
+    <widget_type>LED</widget_type>
+    <name>/M5Sat/Bus/FdirEnabled</name>
+    <wuid>w11</wuid>
+    <x>150</x>
+    <y>182</y>
+    <width>110</width>
+    <height>26</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/FdirEnabled</pv_name>
+    <font><opifont.name fontName="Liberation Sans" height="11" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="255" green="255" blue="255" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>false</backcolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <data_type>0</data_type>
+    <bit>-1</bit>
+    <effect_3d>false</effect_3d>
+    <square_led>true</square_led>
+    <show_boolean_label>true</show_boolean_label>
+    <bulb_border>1</bulb_border>
+    <bulb_border_color><color red="150" green="150" blue="150" /></bulb_border_color>
+    <on_label>ON</on_label>
+    <off_label>OFF</off_label>
+    <on_state></on_state>
+    <off_state></off_state>
+    <on_color><color red="40" green="170" blue="70" /></on_color>
+    <off_color><color red="110" green="115" blue="125" /></off_color>
+    <state_color_fallback><color red="200" green="200" blue="200" /></state_color_fallback>
+    <state_label_fallback>?</state_label_fallback>
+    <state_count>2</state_count>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>機上時刻</name>
+    <wuid>w12</wuid>
+    <x>30</x>
+    <y>220</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>機上時刻</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/OnboardTime</name>
+    <wuid>w13</wuid>
+    <x>150</x>
+    <y>220</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/OnboardTime</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>起動からの時間</name>
+    <wuid>w14</wuid>
+    <x>30</x>
+    <y>248</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>起動からの時間</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/Uptime</name>
+    <wuid>w15</wuid>
+    <x>150</x>
+    <y>248</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/Uptime</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>再起動の回数</name>
+    <wuid>w16</wuid>
+    <x>30</x>
+    <y>276</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>再起動の回数</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/BootCount</name>
+    <wuid>w17</wuid>
+    <x>150</x>
+    <y>276</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/BootCount</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>再起動の理由</name>
+    <wuid>w18</wuid>
+    <x>30</x>
+    <y>304</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>再起動の理由</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/ResetReason</name>
+    <wuid>w19</wuid>
+    <x>150</x>
+    <y>304</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/ResetReason</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>Wi-Fi の電波</name>
+    <wuid>w20</wuid>
+    <x>30</x>
+    <y>332</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>Wi-Fi の電波</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/WifiRssi</name>
+    <wuid>w21</wuid>
+    <x>150</x>
+    <y>332</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/WifiRssi</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
+    <widget_type>Rectangle</widget_type>
+    <name>コマンド</name>
+    <wuid>w22</wuid>
+    <x>380</x>
+    <y>72</y>
+    <width>310</width>
+    <height>236</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <line_color><color red="180" green="186" blue="194" /></line_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>0</border_width>
+    <line_width>1</line_width>
+    <line_style>0</line_style>
+    <alpha>255</alpha>
+    <transparent>false</transparent>
+    <gradient>false</gradient>
+    <fill_level>0.0</fill_level>
+    <horizontal_fill>true</horizontal_fill>
+    <bg_gradient_color><color red="255" green="255" blue="255" /></bg_gradient_color>
+    <fg_gradient_color><color red="255" green="255" blue="255" /></fg_gradient_color>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>コマンド</name>
+    <wuid>w23</wuid>
+    <x>390</x>
+    <y>78</y>
+    <width>290</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>コマンド</text>
+    <font><opifont.name fontName="Liberation Sans" height="12" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="40" green="60" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>受理した数</name>
+    <wuid>w24</wuid>
+    <x>390</x>
+    <y>108</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>受理した数</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/AcceptedCommands</name>
+    <wuid>w25</wuid>
+    <x>510</x>
+    <y>108</y>
+    <width>170</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/AcceptedCommands</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>拒否した数</name>
+    <wuid>w26</wuid>
+    <x>390</x>
+    <y>136</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>拒否した数</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/RejectedCommands</name>
+    <wuid>w27</wuid>
+    <x>510</x>
+    <y>136</y>
+    <width>170</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/RejectedCommands</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>最後に受理</name>
+    <wuid>w28</wuid>
+    <x>390</x>
+    <y>164</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>最後に受理</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/LastCommandId</name>
+    <wuid>w29</wuid>
+    <x>510</x>
+    <y>164</y>
+    <width>170</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/LastCommandId</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>最後のACK</name>
+    <wuid>w30</wuid>
+    <x>390</x>
+    <y>192</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>最後のACK</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/AckCommandId</name>
+    <wuid>w31</wuid>
+    <x>510</x>
+    <y>192</y>
+    <width>170</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/AckCommandId</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>ACKの段階</name>
+    <wuid>w32</wuid>
+    <x>390</x>
+    <y>220</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>ACKの段階</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/AckStage</name>
+    <wuid>w33</wuid>
+    <x>510</x>
+    <y>220</y>
+    <width>170</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/AckStage</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>拒否・失敗の理由</name>
+    <wuid>w34</wuid>
+    <x>390</x>
+    <y>248</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>拒否・失敗の理由</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/AckErrorCode</name>
+    <wuid>w35</wuid>
+    <x>510</x>
+    <y>248</y>
+    <width>170</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/AckErrorCode</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>ACKの3行は、コマンドを送ったときだけ届く</name>
+    <wuid>w36</wuid>
+    <x>390</x>
+    <y>278</y>
+    <width>290</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>ACKの3行は、コマンドを送ったときだけ届く</text>
+    <font><opifont.name fontName="Liberation Sans" height="8" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
+    <widget_type>Rectangle</widget_type>
+    <name>FDIR (異常時の自動退避)</name>
+    <wuid>w37</wuid>
+    <x>380</x>
+    <y>320</y>
+    <width>310</width>
+    <height>104</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <line_color><color red="180" green="186" blue="194" /></line_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>0</border_width>
+    <line_width>1</line_width>
+    <line_style>0</line_style>
+    <alpha>255</alpha>
+    <transparent>false</transparent>
+    <gradient>false</gradient>
+    <fill_level>0.0</fill_level>
+    <horizontal_fill>true</horizontal_fill>
+    <bg_gradient_color><color red="255" green="255" blue="255" /></bg_gradient_color>
+    <fg_gradient_color><color red="255" green="255" blue="255" /></fg_gradient_color>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>FDIR (異常時の自動退避)</name>
+    <wuid>w38</wuid>
+    <x>390</x>
+    <y>326</y>
+    <width>290</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>FDIR (異常時の自動退避)</text>
+    <font><opifont.name fontName="Liberation Sans" height="12" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="40" green="60" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>最後の異常</name>
+    <wuid>w39</wuid>
+    <x>390</x>
+    <y>356</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>最後の異常</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/LastFault</name>
+    <wuid>w40</wuid>
+    <x>510</x>
+    <y>356</y>
+    <width>170</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/LastFault</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>検知した回数</name>
+    <wuid>w41</wuid>
+    <x>390</x>
+    <y>384</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>検知した回数</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/FaultCount</name>
+    <wuid>w42</wuid>
+    <x>510</x>
+    <y>384</y>
+    <width>170</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/FaultCount</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
+    <widget_type>Rectangle</widget_type>
+    <name>観測 (ペイロード)</name>
+    <wuid>w43</wuid>
+    <x>710</x>
+    <y>72</y>
+    <width>340</width>
+    <height>236</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <line_color><color red="180" green="186" blue="194" /></line_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>0</border_width>
+    <line_width>1</line_width>
+    <line_style>0</line_style>
+    <alpha>255</alpha>
+    <transparent>false</transparent>
+    <gradient>false</gradient>
+    <fill_level>0.0</fill_level>
+    <horizontal_fill>true</horizontal_fill>
+    <bg_gradient_color><color red="255" green="255" blue="255" /></bg_gradient_color>
+    <fg_gradient_color><color red="255" green="255" blue="255" /></fg_gradient_color>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>観測 (ペイロード)</name>
+    <wuid>w44</wuid>
+    <x>720</x>
+    <y>78</y>
+    <width>320</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>観測 (ペイロード)</text>
+    <font><opifont.name fontName="Liberation Sans" height="12" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="40" green="60" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>観測の状態</name>
+    <wuid>w45</wuid>
+    <x>720</x>
+    <y>108</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>観測の状態</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/ObservationState</name>
+    <wuid>w46</wuid>
+    <x>840</x>
+    <y>108</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/ObservationState</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>予約の開始時刻</name>
+    <wuid>w47</wuid>
+    <x>720</x>
+    <y>136</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>予約の開始時刻</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/ObservationStart</name>
+    <wuid>w48</wuid>
+    <x>840</x>
+    <y>136</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/ObservationStart</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>予約の長さ</name>
+    <wuid>w49</wuid>
+    <x>720</x>
+    <y>164</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>予約の長さ</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/Bus/ObservationDuration</name>
+    <wuid>w50</wuid>
+    <x>840</x>
+    <y>164</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/Bus/ObservationDuration</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>捕捉している衛星</name>
+    <wuid>w51</wuid>
+    <x>720</x>
+    <y>192</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>捕捉している衛星</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/TrackedCount</name>
+    <wuid>w52</wuid>
+    <x>840</x>
+    <y>192</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/TrackedCount</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>C/N0 平均 / 最大</name>
+    <wuid>w53</wuid>
+    <x>720</x>
+    <y>220</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>C/N0 平均 / 最大</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/AverageCn0</name>
+    <wuid>w54</wuid>
+    <x>840</x>
+    <y>220</y>
+    <width>98</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/AverageCn0</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/MaxCn0</name>
+    <wuid>w55</wuid>
+    <x>942</x>
+    <y>220</y>
+    <width>98</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/MaxCn0</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>観測した時刻</name>
+    <wuid>w56</wuid>
+    <x>720</x>
+    <y>248</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>観測した時刻</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/ObservationTime</name>
+    <wuid>w57</wuid>
+    <x>840</x>
+    <y>248</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/ObservationTime</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
+    <widget_type>Rectangle</widget_type>
+    <name>GNSS (測位)</name>
+    <wuid>w58</wuid>
+    <x>710</x>
+    <y>320</y>
+    <width>340</width>
+    <height>104</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <line_color><color red="180" green="186" blue="194" /></line_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>0</border_width>
+    <line_width>1</line_width>
+    <line_style>0</line_style>
+    <alpha>255</alpha>
+    <transparent>false</transparent>
+    <gradient>false</gradient>
+    <fill_level>0.0</fill_level>
+    <horizontal_fill>true</horizontal_fill>
+    <bg_gradient_color><color red="255" green="255" blue="255" /></bg_gradient_color>
+    <fg_gradient_color><color red="255" green="255" blue="255" /></fg_gradient_color>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>GNSS (測位)</name>
+    <wuid>w59</wuid>
+    <x>720</x>
+    <y>326</y>
+    <width>320</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>GNSS (測位)</text>
+    <font><opifont.name fontName="Liberation Sans" height="12" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="40" green="60" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>測位 / 使用衛星</name>
+    <wuid>w60</wuid>
+    <x>720</x>
+    <y>356</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>測位 / 使用衛星</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/FixType</name>
+    <wuid>w61</wuid>
+    <x>840</x>
+    <y>356</y>
+    <width>98</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/FixType</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/Satellites</name>
+    <wuid>w62</wuid>
+    <x>942</x>
+    <y>356</y>
+    <width>98</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/Satellites</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>測位品質</name>
+    <wuid>w63</wuid>
+    <x>720</x>
+    <y>384</y>
+    <width>120</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>測位品質</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/FixQuality</name>
+    <wuid>w64</wuid>
+    <x>840</x>
+    <y>384</y>
+    <width>200</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/FixQuality</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>0</format_type>
+    <precision>0</precision>
+    <precision_from_pv>true</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
+    <widget_type>Rectangle</widget_type>
+    <name>位置</name>
+    <wuid>w65</wuid>
+    <x>20</x>
+    <y>436</y>
+    <width>340</width>
+    <height>100</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <line_color><color red="180" green="186" blue="194" /></line_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>0</border_width>
+    <line_width>1</line_width>
+    <line_style>0</line_style>
+    <alpha>255</alpha>
+    <transparent>false</transparent>
+    <gradient>false</gradient>
+    <fill_level>0.0</fill_level>
+    <horizontal_fill>true</horizontal_fill>
+    <bg_gradient_color><color red="255" green="255" blue="255" /></bg_gradient_color>
+    <fg_gradient_color><color red="255" green="255" blue="255" /></fg_gradient_color>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>位置</name>
+    <wuid>w66</wuid>
+    <x>30</x>
+    <y>442</y>
+    <width>320</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>位置</text>
+    <font><opifont.name fontName="Liberation Sans" height="12" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="40" green="60" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>緯度</name>
+    <wuid>w67</wuid>
+    <x>30</x>
+    <y>472</y>
+    <width>80</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>緯度</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/Latitude</name>
+    <wuid>w68</wuid>
+    <x>110</x>
+    <y>472</y>
+    <width>240</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/Latitude</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>1</format_type>
+    <precision>6</precision>
+    <precision_from_pv>false</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>経度</name>
+    <wuid>w69</wuid>
+    <x>30</x>
+    <y>500</y>
+    <width>80</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>経度</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
+    <widget_type>Text Update</widget_type>
+    <name>/M5Sat/GNSS/Longitude</name>
+    <wuid>w70</wuid>
+    <x>110</x>
+    <y>500</y>
+    <width>240</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <pv_name>/M5Sat/GNSS/Longitude</pv_name>
+    <text>---</text>
+    <font><opifont.name fontName="Liberation Sans" height="10" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="248" green="249" blue="250" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>1</border_style>
+    <border_width>1</border_width>
+    <border_alarm_sensitive>true</border_alarm_sensitive>
+    <backcolor_alarm_sensitive>true</backcolor_alarm_sensitive>
+    <forecolor_alarm_sensitive>false</forecolor_alarm_sensitive>
+    <transparent>false</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <format_type>1</format_type>
+    <precision>6</precision>
+    <precision_from_pv>false</precision_from_pv>
+    <show_units>true</show_units>
+    <show_lohi>false</show_lohi>
+    <auto_size>false</auto_size>
+    <wrap_words>false</wrap_words>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
+    <widget_type>Rectangle</widget_type>
+    <name>操作</name>
+    <wuid>w71</wuid>
+    <x>380</x>
+    <y>436</y>
+    <width>670</width>
+    <height>100</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <line_color><color red="180" green="186" blue="194" /></line_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>0</border_width>
+    <line_width>1</line_width>
+    <line_style>0</line_style>
+    <alpha>255</alpha>
+    <transparent>false</transparent>
+    <gradient>false</gradient>
+    <fill_level>0.0</fill_level>
+    <horizontal_fill>true</horizontal_fill>
+    <bg_gradient_color><color red="255" green="255" blue="255" /></bg_gradient_color>
+    <fg_gradient_color><color red="255" green="255" blue="255" /></fg_gradient_color>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>操作</name>
+    <wuid>w72</wuid>
+    <x>390</x>
+    <y>442</y>
+    <width>650</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>操作</text>
+    <font><opifont.name fontName="Liberation Sans" height="12" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="40" green="60" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
+    <widget_type>Label</widget_type>
+    <name>送る前に確認ダイアログが出る。MODE は Queues で承認するまで送られない</name>
+    <wuid>w73</wuid>
+    <x>440</x>
+    <y>442</y>
+    <width>600</width>
+    <height>22</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="false" hook_all="false" />
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>送る前に確認ダイアログが出る。MODE は Queues で承認するまで送られない</text>
+    <font><opifont.name fontName="Liberation Sans" height="9" style="0" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="90" green="90" blue="90" /></foreground_color>
+    <background_color><color red="255" green="255" blue="255" /></background_color>
+    <border_color><color red="0" green="0" blue="0" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <transparent>true</transparent>
+    <horizontal_alignment>0</horizontal_alignment>
+    <vertical_alignment>1</vertical_alignment>
+    <wrap_words>false</wrap_words>
+    <auto_size>false</auto_size>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.ActionButton" version="1.0.0">
+    <widget_type>Action Button</widget_type>
+    <name>NO_OP</name>
+    <wuid>w74</wuid>
+    <x>390</x>
+    <y>474</y>
+    <width>104</width>
+    <height>34</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="true" hook_all="false"><action type="RUN_COMMAND"><command>/M5Sat/Bus/NO_OP</command><args></args><confirm_message>NO_OP を送りますか？</confirm_message><description>NO_OP</description></action></actions>
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>NO_OP</text>
+    <font><opifont.name fontName="Liberation Sans" height="9" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="225" green="230" blue="236" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <toggle_button>false</toggle_button>
+    <push_action_index>0</push_action_index>
+    <release_action_index>0</release_action_index>
+    <image></image>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.ActionButton" version="1.0.0">
+    <widget_type>Action Button</widget_type>
+    <name>PAYLOAD ON</name>
+    <wuid>w75</wuid>
+    <x>498</x>
+    <y>474</y>
+    <width>104</width>
+    <height>34</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="true" hook_all="false"><action type="RUN_COMMAND"><command>/M5Sat/Bus/PAYLOAD_POWER</command><args><State>ON</State></args><confirm_message>PAYLOAD ON を送りますか？</confirm_message><description>PAYLOAD ON</description></action></actions>
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>PAYLOAD ON</text>
+    <font><opifont.name fontName="Liberation Sans" height="9" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="225" green="230" blue="236" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <toggle_button>false</toggle_button>
+    <push_action_index>0</push_action_index>
+    <release_action_index>0</release_action_index>
+    <image></image>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.ActionButton" version="1.0.0">
+    <widget_type>Action Button</widget_type>
+    <name>PAYLOAD OFF</name>
+    <wuid>w76</wuid>
+    <x>606</x>
+    <y>474</y>
+    <width>104</width>
+    <height>34</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="true" hook_all="false"><action type="RUN_COMMAND"><command>/M5Sat/Bus/PAYLOAD_POWER</command><args><State>OFF</State></args><confirm_message>PAYLOAD OFF を送りますか？</confirm_message><description>PAYLOAD OFF</description></action></actions>
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>PAYLOAD OFF</text>
+    <font><opifont.name fontName="Liberation Sans" height="9" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="225" green="230" blue="236" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <toggle_button>false</toggle_button>
+    <push_action_index>0</push_action_index>
+    <release_action_index>0</release_action_index>
+    <image></image>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.ActionButton" version="1.0.0">
+    <widget_type>Action Button</widget_type>
+    <name>MODE NOMINAL</name>
+    <wuid>w77</wuid>
+    <x>714</x>
+    <y>474</y>
+    <width>104</width>
+    <height>34</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="true" hook_all="false"><action type="RUN_COMMAND"><command>/M5Sat/Bus/SET_MODE</command><args><Mode>NOMINAL</Mode></args><confirm_message>MODE NOMINAL を送りますか？</confirm_message><description>MODE NOMINAL</description></action></actions>
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>MODE NOMINAL</text>
+    <font><opifont.name fontName="Liberation Sans" height="9" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="225" green="230" blue="236" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <toggle_button>false</toggle_button>
+    <push_action_index>0</push_action_index>
+    <release_action_index>0</release_action_index>
+    <image></image>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.ActionButton" version="1.0.0">
+    <widget_type>Action Button</widget_type>
+    <name>MODE MISSION</name>
+    <wuid>w78</wuid>
+    <x>822</x>
+    <y>474</y>
+    <width>104</width>
+    <height>34</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="true" hook_all="false"><action type="RUN_COMMAND"><command>/M5Sat/Bus/SET_MODE</command><args><Mode>MISSION</Mode></args><confirm_message>MODE MISSION を送りますか？</confirm_message><description>MODE MISSION</description></action></actions>
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>MODE MISSION</text>
+    <font><opifont.name fontName="Liberation Sans" height="9" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="225" green="230" blue="236" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <toggle_button>false</toggle_button>
+    <push_action_index>0</push_action_index>
+    <release_action_index>0</release_action_index>
+    <image></image>
+    <pv_name></pv_name>
+  </widget>
+  <widget typeId="org.csstudio.opibuilder.widgets.ActionButton" version="1.0.0">
+    <widget_type>Action Button</widget_type>
+    <name>FDIR ON</name>
+    <wuid>w79</wuid>
+    <x>930</x>
+    <y>474</y>
+    <width>104</width>
+    <height>34</height>
+    <visible>true</visible>
+    <enabled>true</enabled>
+    <actions hook="true" hook_all="false"><action type="RUN_COMMAND"><command>/M5Sat/Bus/SET_FDIR</command><args><State>ON</State></args><confirm_message>FDIR ON を送りますか？</confirm_message><description>FDIR ON</description></action></actions>
+    <rules />
+    <scripts />
+    <scale_options><width_scalable>true</width_scalable><height_scalable>true</height_scalable><keep_wh_ratio>false</keep_wh_ratio></scale_options>
+    <tooltip></tooltip>
+    <text>FDIR ON</text>
+    <font><opifont.name fontName="Liberation Sans" height="9" style="1" pixels="false">Default</opifont.name></font>
+    <foreground_color><color red="0" green="0" blue="0" /></foreground_color>
+    <background_color><color red="225" green="230" blue="236" /></background_color>
+    <border_color><color red="180" green="186" blue="194" /></border_color>
+    <border_style>0</border_style>
+    <border_width>1</border_width>
+    <toggle_button>false</toggle_button>
+    <push_action_index>0</push_action_index>
+    <release_action_index>0</release_action_index>
+    <image></image>
+    <pv_name></pv_name>
+  </widget>
+</display>
