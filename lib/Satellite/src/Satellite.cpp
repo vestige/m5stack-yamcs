@@ -151,6 +151,12 @@ void Satellite::execute(const Telecommand::Packet& tc, Result* result) {
     }
     case CommandId::CancelObservation: {
       bool wasActive = observationState_ == ObservationState::Active;
+      uint32_t now = clock_.now(nowMs_);
+      if (wasActive) {
+        recordObservation(ObservationResult::Cancelled, observationStartedSec_, now);
+      } else {
+        recordObservation(ObservationResult::Cancelled, observationStart_, observationStart_);
+      }
       observationState_ = ObservationState::None;
       if (wasActive && mode_ == OperationMode::Mission) changeMode(OperationMode::Nominal);
       reportInfo(EventId::ObservationCancelled, wasActive ? 1 : 0);
@@ -168,6 +174,7 @@ void Satellite::updateObservation(uint32_t nowMs) {
     if (now < observationStart_) return;
     if (!payloadPower_) {
       observationState_ = ObservationState::None;
+      recordObservation(ObservationResult::SkippedPayloadOff, observationStart_, observationStart_);
       EventPacket::Event event;
       event.severity = EventPacket::Severity::Warning;
       event.id = EventId::ObservationSkipped;
@@ -177,6 +184,7 @@ void Satellite::updateObservation(uint32_t nowMs) {
     }
     if (mode_ != OperationMode::Nominal) {
       observationState_ = ObservationState::None;
+      recordObservation(ObservationResult::SkippedNotNominal, observationStart_, observationStart_);
       EventPacket::Event event;
       event.severity = EventPacket::Severity::Warning;
       event.id = EventId::ObservationSkipped;
@@ -186,6 +194,7 @@ void Satellite::updateObservation(uint32_t nowMs) {
       return;
     }
     observationState_ = ObservationState::Active;
+    observationStartedSec_ = now;
     changeMode(OperationMode::Mission);
     reportInfo(EventId::ObservationStarted, observationDuration_);
     return;
@@ -202,11 +211,21 @@ void Satellite::updateObservation(uint32_t nowMs) {
 
 void Satellite::endObservation(bool completed) {
   observationState_ = ObservationState::None;
+  recordObservation(completed ? ObservationResult::Completed : ObservationResult::Aborted, observationStartedSec_,
+                    clock_.now(nowMs_));
+  if (completed) completedObservations_++;
   EventPacket::Event event;
   event.severity = completed ? EventPacket::Severity::Info : EventPacket::Severity::Warning;
   event.id = EventId::ObservationEnded;
   event.arg1 = completed ? 0 : 1;
   report(event);
+}
+
+void Satellite::recordObservation(ObservationResult result, uint32_t startSec, uint32_t endSec) {
+  lastObservationResult_ = result;
+  lastObservationStart_ = startSec;
+  uint32_t length = endSec > startSec ? endSec - startSec : 0;
+  lastObservationLength_ = length > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(length);
 }
 
 void Satellite::checkHealth(uint32_t nowMs, uint32_t lastGnssDataMs) {
@@ -280,6 +299,10 @@ void Satellite::fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const {
   hk->observationState = observationState_;
   hk->observationStart = observationState_ == ObservationState::None ? 0 : observationStart_;
   hk->observationDuration = observationState_ == ObservationState::None ? 0 : observationDuration_;
+  hk->lastObservationResult = lastObservationResult_;
+  hk->lastObservationStart = lastObservationStart_;
+  hk->lastObservationLength = lastObservationLength_;
+  hk->completedObservations = completedObservations_;
 }
 
 const char* Satellite::modeName(OperationMode mode) {

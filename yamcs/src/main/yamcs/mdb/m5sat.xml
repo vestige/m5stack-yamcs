@@ -114,6 +114,28 @@
 						<Enumeration value="2" label="ACTIVE" />
 					</EnumerationList>
 				</EnumeratedParameterType>
+				<EnumeratedParameterType name="Observation_Result_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="NONE" />
+						<Enumeration value="1" label="COMPLETED" />
+						<Enumeration value="2" label="ABORTED" />
+						<Enumeration value="3" label="SKIPPED_PAYLOAD_OFF" />
+						<Enumeration value="4" label="SKIPPED_NOT_NOMINAL" />
+						<Enumeration value="5" label="CANCELLED" />
+					</EnumerationList>
+					<!-- 通信できない間に観測がうまくいかなかったことに、次のパスで気づけるようにする -->
+					<DefaultAlarm>
+						<EnumerationAlarmList>
+							<EnumerationAlarm alarmLevel="warning" enumerationLabel="ABORTED" />
+							<EnumerationAlarm alarmLevel="warning" enumerationLabel="SKIPPED_PAYLOAD_OFF" />
+							<EnumerationAlarm alarmLevel="warning" enumerationLabel="SKIPPED_NOT_NOMINAL" />
+						</EnumerationAlarmList>
+					</DefaultAlarm>
+				</EnumeratedParameterType>
+				<IntegerParameterType name="Observation_Count_Type" signed="false">
+					<IntegerDataEncoding sizeInBits="16" />
+				</IntegerParameterType>
 				<IntegerParameterType name="Seconds_Type" signed="false">
 					<UnitSet>
 						<Unit>s</Unit>
@@ -255,6 +277,10 @@
 				<Parameter name="ObservationState" parameterTypeRef="Observation_State_Type" shortDescription="時刻指定の観測の状態" />
 				<Parameter name="ObservationStart" parameterTypeRef="Unix_Time_Type" shortDescription="予約した観測の開始時刻" />
 				<Parameter name="ObservationDuration" parameterTypeRef="Seconds_Type" shortDescription="予約した観測の長さ" />
+				<Parameter name="LastObservationResult" parameterTypeRef="Observation_Result_Type" shortDescription="最後の観測の結果 (通信できない間に観測しても、次のパスでわかる)" />
+				<Parameter name="LastObservationStart" parameterTypeRef="Unix_Time_Type" shortDescription="最後の観測を実際に始めた時刻 (見送り・開始前の取り消しは予約の時刻)" />
+				<Parameter name="LastObservationLength" parameterTypeRef="Seconds_Type" shortDescription="最後の観測で実際に観測した長さ" />
+				<Parameter name="CompletedObservations" parameterTypeRef="Observation_Count_Type" shortDescription="完了した観測の回数" />
 				<Parameter name="AckTcSequence" parameterTypeRef="Tc_Sequence_Type" shortDescription="ACK: どのTC (シーケンス番号) への応答か" />
 				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
 				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
@@ -289,6 +315,10 @@
 						<ParameterRefEntry parameterRef="ObservationState" />
 						<ParameterRefEntry parameterRef="ObservationStart" />
 						<ParameterRefEntry parameterRef="ObservationDuration" />
+						<ParameterRefEntry parameterRef="LastObservationResult" />
+						<ParameterRefEntry parameterRef="LastObservationStart" />
+						<ParameterRefEntry parameterRef="LastObservationLength" />
+						<ParameterRefEntry parameterRef="CompletedObservations" />
 					</EntryList>
 					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
 						<RestrictionCriteria>
