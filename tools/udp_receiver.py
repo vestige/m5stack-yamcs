@@ -40,8 +40,9 @@ APID_TELECOMMAND = 110
 # time, ms, lat, lon, alt, sats, fixQuality, fixType, flags, uptime, ok, err
 GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
 # mode, payloadPower, accepted, rejected, lastCommand, rssi, freeHeap, minFreeHeap, uptime, bootCount, resetReason,
-# fdirEnabled, lastFault, faultCount, onboardTime, observationState, observationStart, observationDuration
-HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIH")
+# fdirEnabled, lastFault, faultCount, onboardTime, observationState, observationStart, observationDuration,
+# lastObservationResult, lastObservationStart, lastObservationLength, completedObservations
+HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHH")
 # tcSequence, commandId, stage, errorCode
 ACK_PAYLOAD = struct.Struct(">HBBB")
 # severity, eventId, arg1, arg2
@@ -52,6 +53,8 @@ OBSERVATION_HEADER = struct.Struct(">IBBBBBBBBB")
 OBSERVATION_ENTRY = struct.Struct(">BBbHB")
 GNSS_SYSTEM = {0: "G", 1: "R", 2: "E", 3: "C", 4: "J", 5: "I"}
 OBSERVATION_STATE = {0: "NONE", 1: "SCHEDULED", 2: "ACTIVE"}
+OBSERVATION_RESULT = {0: "NONE", 1: "COMPLETED", 2: "ABORTED", 3: "SKIPPED_PAYLOAD_OFF",
+                      4: "SKIPPED_NOT_NOMINAL", 5: "CANCELLED"}
 
 FLAG_TIME_VALID = 1 << 0
 FLAG_DATE_VALID = 1 << 1
@@ -161,7 +164,7 @@ def format_gnss(data):
 def format_housekeeping(data):
     (mode, payload, accepted, rejected, last_command, rssi, free_heap, min_free_heap, uptime, boot_count,
      reset_reason, fdir, last_fault, fault_count, onboard_time, obs_state, obs_start,
-     obs_duration) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
+     obs_duration, last_result, last_start, last_length, completed) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
     return (
         f"HK   mode={MODE.get(mode, mode)} payload={'ON' if payload else 'OFF'} "
         f"cmd(ok={accepted} ng={rejected} last={COMMAND.get(last_command, 'NONE')}) rssi={rssi}dBm "
@@ -170,6 +173,9 @@ def format_housekeeping(data):
         f"fdir={'ON' if fdir else 'OFF'} fault={FAULT.get(last_fault, last_fault)}x{fault_count} "
         f"time={format_utc(onboard_time)} obs={OBSERVATION_STATE.get(obs_state, obs_state)}"
         + (f"({format_utc(obs_start)} {obs_duration}s)" if obs_state else "")
+        + f" last_obs={OBSERVATION_RESULT.get(last_result, last_result)}"
+        + (f"({format_utc(last_start)} {last_length}s)" if last_result else "")
+        + f" done={completed}"
     )
 
 
