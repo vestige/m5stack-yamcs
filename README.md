@@ -632,7 +632,7 @@ ACK（最後のACK・段階・理由）は、コマンドを送ったときだ�
 **パスの計画**：本物の運用では、衛星の軌道と地上局の場所からパスの時刻を予測します。M5Satは軌道を回っていないので、[tools/plan_passes.py](tools/plan_passes.py) で決まった間隔の人工のパスを作ります。
 
 ```sh
-python3 tools/plan_passes.py create                 # 1分後から、10分ごとに2分間のパスを3回
+python3 tools/plan_passes.py create                 # 2分後から、10分ごとに2分間のパスを3回
 python3 tools/plan_passes.py create --passes 5 --interval 6 --duration 2
 python3 tools/plan_passes.py list                   # 計画と、アクティビティの実行状況
 python3 tools/plan_passes.py clear                  # これからの予定を消し、常時通信に戻す (終わった予定は振り返り用に残す)
