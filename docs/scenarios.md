@@ -2,6 +2,7 @@
 
 衛星 M5Sat（M5Stack）を、地上局（Mac の YAMCS）から運用するときの手順をまとめます。Milestone 5 の各ステップで実際に試したシナリオを、あとからやり直せる形にしています。
 
+- システムの全体像（どれが衛星バス・ペイロード・地上局・管制局か）は [overview.md](overview.md) にまとめています
 - 各ステップの仕様（パケットの形式やコマンドの一覧）は [README](../README.md) の Milestone 5 を見てください
 - 「本物の衛星ではどうしているか」は [real-operations.md](real-operations.md) にまとめています
 - YAMCS の各メニューの役割は [yamcs-web-ui.md](yamcs-web-ui.md) にまとめています

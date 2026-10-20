@@ -4,6 +4,8 @@ M5StackとGNSSユニットを使って、YAMCSによる衛星テレメトリの�
 
 実際のGNSS衛星から受信したデータをM5Stackで取得し、最終的にYAMCSへTelemetryとして送信・可視化することを目標にしています。
 
+> **初めて見る人へ**：M5Stack を人工衛星「M5Sat」、Mac の YAMCS を管制局に見立てて、衛星の運用を模擬しています。どれが衛星バス・ペイロード・地上局・管制局にあたるかと、データの流れは [docs/overview.md](docs/overview.md) にまとめています。30分のデモの進め方は [docs/demo.md](docs/demo.md) です。このREADMEは、Milestoneごとに作ってきた経緯と仕様の記録です。
+
 ## Goal
 
 最終的には以下の構成を目指します。
@@ -40,6 +42,8 @@ Telemetry / Archive / Monitor
 
 | ドキュメント | 内容 |
 | --- | --- |
+| [docs/overview.md](docs/overview.md) | システムの全体像。衛星バス・ペイロード・地上局・管制局が何にあたるか、データの流れ、ファイルの地図 |
+| [docs/demo.md](docs/demo.md) | 30分のデモのシナリオ。準備、時間配分、見せるもの・話すこと、うまくいかないとき |
 | [docs/scenarios.md](docs/scenarios.md) | 運用シナリオ集。YAMCS から衛星 M5Sat を運用するときの手順 |
 | [docs/real-operations.md](docs/real-operations.md) | 本物の衛星運用との対応。FDIR、承認と役割分担、観測の計画、機上時刻、地上局とパスなど |
 | [docs/yamcs-web-ui.md](docs/yamcs-web-ui.md) | YAMCS の Web UI の各メニューの役割 |
