@@ -2,7 +2,7 @@
 """YAMCS の Timeline に、パス (衛星と通信できる時間) と観測の計画を作る。
 
 使い方:
-    python3 tools/plan_passes.py create                 # 1分後から、10分ごとに2分間のパスを3回
+    python3 tools/plan_passes.py create                 # 2分後から、10分ごとに2分間のパスを3回
     python3 tools/plan_passes.py create --passes 5 --interval 6 --duration 2
     python3 tools/plan_passes.py list                   # 作った計画を表示する
     python3 tools/plan_passes.py clear                  # これからの予定を消し、データリンクを常に有効へ戻す
@@ -220,7 +220,7 @@ def main():
     parser.add_argument("--passes", type=int, default=3, help="パスの回数 (default: 3)")
     parser.add_argument("--interval", type=float, default=10, help="パスの間隔 [分] (default: 10)")
     parser.add_argument("--duration", type=float, default=2, help="パスの長さ [分] (default: 2)")
-    parser.add_argument("--start", type=float, default=1, help="最初のパスまでの時間 [分] (default: 1)")
+    parser.add_argument("--start", type=float, default=2, help="最初のパスまでの時間 [分] (default: 2)")
     parser.add_argument("--url", default="http://localhost:8090", help="YAMCSのURL")
     parser.add_argument("--instance", default="gnss")
     parser.add_argument("--all", action="store_true", help="clear: 終わった予定も含めて全部消す")
