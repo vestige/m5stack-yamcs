@@ -262,7 +262,7 @@ scripts/stop.sh     # 両方を終了
 
 受信時刻にはYAMCSが受け取った時刻を使います。GNSSから得たUTC時刻は、パラメータ `/M5Sat/GNSS/UtcTime` として見られます。保存したテレメトリは `yamcs/target/yamcs/yamcs-data` に入ります。`mvn clean` で消えます。
 
-### Milestone 5 - Satellite Operations Simulation
+### Milestone 5 - Satellite Operations Simulation ✅
 
 M5Stackを1機の衛星に見立てて、YAMCSを地上局として運用する模擬実験をします。テレメトリを受けるだけでなく、地上からコマンドを送り、衛星が実行したことを確かめるところまでを体験します。
 
