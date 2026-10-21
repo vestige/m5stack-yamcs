@@ -17,6 +17,7 @@ TCは、直近にTMを送ってきた衛星のIPアドレスへ送る。TMが届
     APID 103 イベント        lib/TelemetryPacket/src/EventPacket.h
     APID 104 観測データ      lib/TelemetryPacket/src/ObservationPacket.h
     APID 110 TC             lib/Satellite/src/Telecommand.h
+    APID 111 訓練用の異常    lib/Satellite/src/TrainingFault.h (出題者が tools/inject_fault.py で送る)
 """
 
 import argparse
@@ -36,6 +37,7 @@ APID_ACK = 102
 APID_EVENT = 103
 APID_OBSERVATION = 104
 APID_TELECOMMAND = 110
+APID_TRAINING = 111  # 訓練用の異常 (tools/inject_fault.py)。YAMCS を通らない
 
 # time, ms, lat, lon, alt, sats, fixQuality, fixType, flags, uptime, ok, err
 GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
@@ -242,8 +244,15 @@ def format_event(data):
     return f"EVT  {EVENT_SEVERITY.get(severity, severity)} {name} {detail}"
 
 
+TRAINING_KIND = {0: "clear", 1: "gnss-stop", 2: "command-loss", 3: "reboot"}
+
+
 def format_telecommand(data):
     header = decode_header(data)
+    if header["apid"] == APID_TRAINING:
+        kind = data[PRIMARY_HEADER.size] if len(data) > PRIMARY_HEADER.size else None
+        duration = int.from_bytes(data[PRIMARY_HEADER.size + 1:PRIMARY_HEADER.size + 3], "big")
+        return f"TRAINING {TRAINING_KIND.get(kind, kind)}" + (f" duration={duration}s" if kind in (1, 2) else "")
     command_id = data[PRIMARY_HEADER.size] if len(data) > PRIMARY_HEADER.size else None
     args = data[PRIMARY_HEADER.size + 1:]
     return f"TC   seq={header['seq']} {COMMAND.get(command_id, command_id)} args={args.hex() or '-'}"

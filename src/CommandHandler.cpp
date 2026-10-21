@@ -15,6 +15,22 @@ void CommandHandler::poll() {
 }
 
 void CommandHandler::handle(const uint8_t* data, size_t size) {
+  if (TrainingFault::isTrainingPacket(data, size)) {
+    TrainingFault::Request request;
+    if (TrainingFault::parse(data, size, &request)) {
+      training_.apply(request, millis());
+      Serial.printf("[TRAINING] kind=%u duration=%us\n", static_cast<unsigned>(request.kind), request.durationSec);
+    } else {
+      Serial.println("[TRAINING] invalid packet");
+    }
+    return;
+  }
+  // 訓練用の異常「コマンドの無視」: 受け取ったことにせず、ACKも返さない
+  if (training_.commandsIgnored(millis())) {
+    Serial.println("[TRAINING] command ignored");
+    return;
+  }
+
   Telecommand::Packet tc;
   bool hasHeader = false;
   Telecommand::ErrorCode parseError = Telecommand::parse(data, size, &tc, &hasHeader);

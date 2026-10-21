@@ -2,13 +2,16 @@
 
 #include <AckPacket.h>
 #include <Satellite.h>
+#include <TrainingFault.h>
 
 #include "GroundLink.h"
 
-// 地上から届いたTCを衛星に実行させ、受理・拒否・完了をACKで返す
+// 地上から届いたTCを衛星に実行させ、受理・拒否・完了をACKで返す。
+// 訓練用のパケット (APID 111) は、ACKを返さずに訓練用の異常へ渡す
 class CommandHandler {
  public:
-  CommandHandler(Satellite& satellite, GroundLink& link) : satellite_(satellite), link_(link) {}
+  CommandHandler(Satellite& satellite, GroundLink& link, TrainingFaults& training)
+      : satellite_(satellite), link_(link), training_(training) {}
 
   void poll();
 
@@ -32,5 +35,6 @@ class CommandHandler {
 
   Satellite& satellite_;
   GroundLink& link_;
+  TrainingFaults& training_;
   PendingCompletion pending_;
 };
