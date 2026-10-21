@@ -668,17 +668,43 @@ Timelineには次の予定を作ります。予定・帯・ビューはYAMCSの�
 
 **運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-9) を見てください。
 
-#### 5-10 異常対応の訓練
+#### 5-10 異常対応の訓練 ✅
 
-異常を意図的に起こすデバッグ用のコマンドを用意して、異常対応を訓練します。
+運用者が、衛星の異常に気づき、原因を推定し、手順書で元に戻すまでを訓練します。訓練の出題者は、運用者に知らせずに異常を1つ起こします。運用者はいつもの画面（運用画面、Alarms、Events、Command history）だけを頼りに対応し、あとで気づくまでと復旧までにかかった時間を振り返ります。
 
-| 訓練用の異常 | 内容 |
-| --- | --- |
-| GNSS受信の停止 | GNSSのデータが届かなくなったことにする |
-| コマンドの無視 | 衛星が一定時間コマンドに応答しなくなる |
-| 再起動 | 衛星が予告なく再起動する |
+**異常を起こす操作は、運用者から見えないようにする**：出題者は [tools/inject_fault.py](tools/inject_fault.py) で、YAMCS を通さずに地上局へ直接、訓練用の指示を送ります。Command history や Events には出ません。
 
-**運用シナリオ**（予定）：[docs/scenarios.md](docs/scenarios.md#planned) を見てください。
+```text
+出題者: tools/inject_fault.py ──UDP 10025──▶ 地上局 (udp_receiver.py) ──▶ 衛星
+運用者: YAMCS            ──UDP 10025──▶ 地上局 (udp_receiver.py) ──▶ 衛星   （いつもの経路）
+```
+
+```sh
+python3 tools/inject_fault.py gnss-stop --duration 120    # 120秒間、GPS のデータが届かなくなる
+python3 tools/inject_fault.py command-loss --duration 60  # 60秒間、コマンドを受け付けなくなる
+python3 tools/inject_fault.py reboot                      # 予告なく再起動する
+python3 tools/inject_fault.py clear                       # 続いている異常をすべて止める
+python3 tools/inject_fault.py gnss-stop --delay 120       # 2分後に起こす (運用者の前で打たなくてよい)
+```
+
+| 訓練用の異常 | 衛星で起きること | 運用者の手がかり |
+| --- | --- | --- |
+| `gnss-stop` | 指定した秒数、GPS のデータを受け取れなくなる（ケーブルが抜けたときと同じ） | FDIR が約10秒で SAFE へ退避。アラーム、`FAULT_DETECTED` |
+| `command-loss` | 指定した秒数、コマンドを受け付けない（ACK を返さない）。HK は出続ける | アラームは出ない。送ったコマンドが Accepted で時間切れになる |
+| `reboot` | ウォッチドッグで再起動する（リセットの理由は `TASK_WATCHDOG`） | `BOOT` のイベント。再起動の回数が増え、起動からの時間が0に戻る。予約していた観測が消える |
+
+訓練用の指示は、ふつうのコマンド（APID 110）と別の **APID 111** のパケットです（[lib/Satellite/src/TrainingFault.h](lib/Satellite/src/TrainingFault.h)）。衛星は ACK を返さず、コマンドの数にも数えず、イベントも出しません。本物の運用では、訓練の異常は地上のシミュレータに入れ、打ち上げる衛星には入れません。M5Sat には別のシミュレータがないので、衛星（M5Stack）がシミュレータの役も兼ねています。
+
+**振り返り**：`inject_fault.py` は、出題した時刻と種類を `logs/training.jsonl` に残します（運用者には見せない）。[tools/training_report.py](tools/training_report.py) は、YAMCS に残った記録（アラームとその確認、イベント、コマンド、運用モードの移り変わり）を時系列の表にし、気づくまで（運用者の最初の対応：アラームの確認か、運用者が送ったコマンド）と復旧までの時間を出します。
+
+```sh
+python3 tools/training_report.py           # 最後の出題を振り返る
+python3 tools/training_report.py --list    # これまでの出題の一覧
+```
+
+本物の衛星運用で訓練をする理由は、[docs/real-operations.md](docs/real-operations.md#training) にまとめています。
+
+**運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#s5-10) を見てください。
 
 #### 発展
 

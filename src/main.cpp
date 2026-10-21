@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <M5Unified.h>
 #include <Satellite.h>
+#include <TrainingFault.h>
+#include <esp_task_wdt.h>
 
 #include "BusMonitor.h"
 #include "CommandHandler.h"
@@ -45,7 +47,8 @@ UdpTransport udpTransport(WIFI_SSID, WIFI_PASSWORD, TELEMETRY_HOST, TELEMETRY_PO
 EspNowTransport espNowTransport(ESPNOW_CHANNEL);
 LinkSetting::Link activeLink;
 GroundLink groundLink;
-CommandHandler commands(satellite, groundLink);
+TrainingFaults training;
+CommandHandler commands(satellite, groundLink, training);
 BusMonitor bus;
 TelemetryDisplay display;
 PayloadLed payloadLed(PAYLOAD_LED_PIN);
@@ -92,6 +95,16 @@ void switchLinkOnLongPress() {
   ESP.restart();
 }
 
+// 訓練用の異常「予告なしの再起動」: 本物の予告なしの再起動に多いウォッチドッグのリセットを起こす。
+// このタスクをウォッチドッグに見張らせてから止まるので、数秒後にリセットされる (理由は TASK_WATCHDOG)
+void hangUntilWatchdogReset() {
+  Serial.println("[TRAINING] hang until watchdog reset");
+  esp_task_wdt_init(3, true);
+  esp_task_wdt_add(nullptr);
+  while (true) {
+  }
+}
+
 void refreshDisplay(uint32_t now) {
   char linkStatus[64];
   groundLink.describe(linkStatus, sizeof(linkStatus));
@@ -126,8 +139,9 @@ void setup() {
 }
 
 void loop() {
-  gnss.poll(satellite.payloadPower());
+  gnss.poll(satellite.payloadPower(), training.gnssStopped(millis()));
   commands.poll();
+  if (training.takeRebootRequest()) hangUntilWatchdogReset();
   uint32_t utc;
   if (gnss.takeNewUtc(&utc)) satellite.syncTime(utc, millis());
   satellite.checkHealth(millis(), gnss.lastSentenceMs());

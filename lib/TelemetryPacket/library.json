@@ -1,0 +1,4 @@
+{
+  "name": "TelemetryPacket",
+  "dependencies": [{ "name": "NmeaParser" }]
+}

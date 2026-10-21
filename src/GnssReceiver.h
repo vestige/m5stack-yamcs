@@ -8,8 +8,9 @@ class GnssReceiver {
  public:
   void begin(int rxPin, int txPin);
   // 届いたNMEAを読む。ペイロードの電源がOFFの間は読み捨てる。
-  // 電源を切ったら、受信の状態 (位置や衛星の一覧) も消える
-  void poll(bool payloadPower);
+  // 電源を切ったら、受信の状態 (位置や衛星の一覧) も消える。
+  // dataLost: 訓練用の異常「GNSS受信の停止」。ケーブルが抜けたときと同じく、届いたデータを捨てる
+  void poll(bool payloadPower, bool dataLost = false);
 
   const NmeaParser& parser() const { return parser_; }
   bool receiving(uint32_t now) const;

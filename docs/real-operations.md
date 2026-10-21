@@ -15,10 +15,12 @@ M5Sat で作ってきた仕組みが、本物の衛星運用では何にあた�
 7. [時刻指定の運用と観測の計画](#planning)
 8. [機上時刻](#onboard-time)
 9. [運用手順書](#procedures)
-10. [運用画面とトレンドの監視](#displays)
-11. [複数の会社のペイロードを載せる](#hosted-payload)
-12. [地上局とパス](#ground-stations)
-13. [M5Sat との対応表](#mapping)
+10. [運用の訓練とシミュレータ](#training)
+11. [運用画面とトレンドの監視](#displays)
+12. [複数の会社のペイロードを載せる](#hosted-payload)
+13. [地上局とパス](#ground-stations)
+14. [M5Sat との対応表](#mapping)
+15. [参考資料](#references)
 
 ---
 
@@ -208,9 +210,46 @@ M5Sat では、GPS の時刻が届くたびに合わせ、その間は衛星の�
 
 ---
 
+<a id="training"></a>
+
+## 10. 運用の訓練とシミュレータ
+
+本物の衛星運用では、打ち上げ前に運用チームが何度も訓練（運用リハーサル、シミュレーション訓練）をします。打ち上げ後も、新しく入った運用者のために続けます。M5Sat の 5-10 は、この訓練にあたります。
+
+| 訓練で確かめること | 理由 |
+| --- | --- |
+| 運用者が異常に気づけるか | 異常は予告なく起きる。打ち上げ直後の数日は特に危ない |
+| 手順書が正しいか | 手順書の間違いは、訓練で使って初めて見つかることが多い |
+| 判断の練習 | 「すぐ戻すか、原因を確かめるまで待つか」のような判断は、手順書だけでは身につかない |
+| 役割分担と連絡 | 誰が気づき、誰が判断し、誰が承認するか |
+
+**異常は、衛星ではなくシミュレータに入れる**
+
+本物の訓練では、運用者は地上のシミュレータ（衛星の動きを真似るソフト）や試験用の衛星（エンジニアリングモデル）に向かって運用し、訓練の担当者がそこに異常を入れます。打ち上げる衛星のソフトには、秘密の指示で異常を起こす口は入れません。誤って宇宙で動くと危ないからです。
+
+M5Sat には別のシミュレータがないので、衛星（M5Stack）がシミュレータの役も兼ねています。訓練用の指示（APID 111）は、運用者の使う YAMCS を通らない経路で届き、Command history にも Events にも出ません。運用者に見えるのは、本物の異常と同じ「症状」だけです。
+
+**訓練の題材は、起こりうる故障から選ぶ**
+
+本物では、衛星の設計のときに「どの部品がどう壊れると、何が起きるか」を洗い出しておき（FMEA など）、その中から訓練の題材を選びます。M5Sat の3つの出題も、本物でよく起きる異常に対応しています。
+
+| M5Sat の出題 | 本物の衛星で起きること | 衛星の備え |
+| --- | --- | --- |
+| GNSS 受信の停止 | 機器の故障、ケーブルや電源の不具合 | FDIR が切り離して SAFE へ逃げる |
+| コマンドの無視 | 受信機の故障、ソフトの不具合でコマンドを処理できなくなる | **コマンドロスタイマ**：決まった時間（数時間〜数日）コマンドが届かなければ、衛星が自分で受信機やコンピュータをリセットする。M5Sat には無い |
+| 予告なしの再起動 | 放射線によるビット反転（シングルイベント）、ソフトの不具合でウォッチドッグがリセットする | 再起動の回数と理由を HK に出す。大事な設定は不揮発メモリに置く |
+
+コマンドの無視は、アラームが出ないので、いちばん気づきにくい異常です。テレメトリは届くのにコマンドだけ通らないとき、地上の設備（地上局の送信機）を疑うのか、衛星の受信側を疑うのか、切り分けが要ります。
+
+**振り返り**
+
+訓練のあとは、時系列（いつ何が起き、いつ気づき、何をしたか）を見ながら振り返り、手順書や運用画面を直します。M5Sat では `tools/training_report.py` が、YAMCS に残った記録から時系列の表を作ります。アラームを確認するときのメッセージに推定した原因を書いておくと、あとで判断の筋道を追えます。
+
+---
+
 <a id="displays"></a>
 
-## 10. 運用画面とトレンドの監視
+## 11. 運用画面とトレンドの監視
 
 本物の管制室では、衛星の状態を見る画面を目的ごとに分けています。M5Sat の運用画面（YAMCS の Displays）は前者、Grafana（[issue #21](https://github.com/vestige/m5stack-yamcs/issues/21)）は後者にあたります。
 
@@ -235,7 +274,7 @@ M5Sat では、GPS の時刻が届くたびに合わせ、その間は衛星の�
 
 <a id="hosted-payload"></a>
 
-## 11. 複数の会社のペイロードを載せる
+## 12. 複数の会社のペイロードを載せる
 
 1機の衛星に複数のペイロードが載り、それぞれ別の会社が使うことがあります。他社の衛星に自社の機器を相乗りさせる形は、ホステッドペイロードと呼ばれます。このとき、**データは会社ごとに分けたいけれど、衛星の運用は分けてはいけない** という事情があります。
 
@@ -281,7 +320,7 @@ M5Sat では、GPS の時刻が届くたびに合わせ、その間は衛星の�
 
 <a id="ground-stations"></a>
 
-## 12. 地上局とパス
+## 13. 地上局とパス
 
 **パスと AOS / LOS**
 
@@ -325,7 +364,7 @@ M5Sat では、1 と 2 を Timeline のアクティビティで自動にして�
 
 <a id="mapping"></a>
 
-## 13. M5Sat との対応表
+## 14. M5Sat との対応表
 
 | 本物の衛星運用 | M5Sat |
 | --- | --- |
@@ -339,9 +378,52 @@ M5Sat では、1 と 2 を Timeline のアクティビティで自動にして�
 | 機上時刻 | `OnboardClock` |
 | 時刻つきのコマンドの予定表 | `SCHEDULE_OBSERVATION`（1件だけ） |
 | 運用手順書 | コマンドスタック（`yamcs/src/main/yamcs/stacks/`） |
+| 運用の訓練（シミュレータに異常を入れる） | `tools/inject_fault.py` と、訓練用の指示（APID 111）。衛星がシミュレータの役も兼ねる |
 | 管制室の運用画面 | Telemetry → Displays（`yamcs/src/main/yamcs/displays/`） |
 | 管制局 | YAMCS（Mac） |
 | 管制局の中の二人確認 | Commanding → Queues の承認 |
 | 地上局（アンテナと無線機） | 受信スクリプトと M5StickC（ESP-NOW） |
 | パス、AOS / LOS | M5StickC の画面の AOS / LOS。Timeline の人工のパス（`tools/plan_passes.py`） |
 | パスの外で起きたことの記録 | HK の最後の観測の結果（RAM） |
+
+---
+
+<a id="references"></a>
+
+## 15. 参考資料
+
+このページの説明の根拠になる、公開されている資料です。それぞれ「何の根拠になるか」を添えています。どれも 2026-10-21 に開けることを確かめました。ここに無い話（コマンドロスタイマの時間など）は、一般的な考え方として書いています。
+
+**衛星運用の全体（パス、管制局、計画、訓練）**
+
+| 資料 | 根拠になること |
+| --- | --- |
+| [NASA Small Spacecraft Technology State of the Art: Ground Data Systems and Mission Operations](https://www.nasa.gov/smallsat-institute/sst-soa/ground-data-systems-and-mission-operations/) | 低軌道の衛星は軌道の一部でしか地上局から見えないこと（パス）。管制局（MOC）が衛星との通信をすべて受け持つこと。地上局の予定の調整。CCSDS の勧告に沿った地上システム |
+| [NASA Systems Engineering Handbook 3.0: NASA Program/Project Life Cycle](https://www.nasa.gov/reference/3-0-nasa-program-project-life-cycle/) | 打ち上げ前（Phase D）に、運用する人のリハーサルと訓練を行うこと。運用準備審査（ORR） |
+| [ESA: Simulations ongoing for Biomass launch](https://www.esa.int/ESA_Multimedia/Images/2025/04/Simulations_ongoing_for_Biomass_launch) | 打ち上げ前に、運用チーム全体でシミュレーション訓練（simulation campaign）を数か月行うこと |
+| [ESA: Operations](https://www.esa.int/Enabling_Support/Operations) | ESA の管制センター（ESOC）と地上局網（ESTRACK）の紹介 |
+| [CelesTrak](https://celestrak.org/) | 衛星の軌道要素（TLE）の公開。パスの時刻の予測に使う |
+
+**衛星側の備え（FDIR、ウォッチドッグ、運用しやすさ）**
+
+| 資料 | 根拠になること |
+| --- | --- |
+| [NASA Small Spacecraft Technology State of the Art: Small Spacecraft Avionics](https://www.nasa.gov/smallsat-institute/sst-soa/small-spacecraft-avionics/) | 衛星のコンピュータが異常の検知を受け持つこと。ウォッチドッグタイマ。放射線によるビット反転（シングルイベントアップセット） |
+| [ECSS-E-ST-70-11C Space segment operability](https://ecss.nl/standard/ecss-e-st-70-11c-space-segment-operability/) | 欧州の宇宙機の標準。衛星を、平常時と想定した異常時に地上から運用できるように作るための要求（運用しやすさ、operability）。この版は Rev.1 に置き換わっている |
+
+**テレメトリとコマンドの標準（M5Sat で使っている形式）**
+
+| 資料 | 根拠になること |
+| --- | --- |
+| [CCSDS 133.0-B-2 Space Packet Protocol](https://public.ccsds.org/Pubs/133x0b2e2.pdf) | M5Sat のパケットの形（Primary Header、APID、シーケンス番号）。[CCSDS の標準の一覧（Blue Books）](https://public.ccsds.org/Publications/BlueBooks.aspx) |
+| [ECSS-E-ST-70-41C Telemetry and telecommand packet utilization](https://ecss.nl/standard/ecss-e-st-70-41c-space-engineering-telemetry-and-telecommand-packet-utilization-15-april-2016/) | 欧州の衛星で使うパケットの使い方の標準（PUS）。コマンドの受理・実行の報告、HK、イベントなど |
+| [OMG XTCE](https://www.omg.org/spec/XTCE/) | パケットとコマンドの定義の形式。M5Sat の Mission Database（`m5sat.xml`）はこの形式 |
+| [YAMCS のドキュメント](https://docs.yamcs.org/)、[YAMCS](https://www.yamcs.org/) | M5Sat の管制局に使っているソフト |
+
+**GNSS の電波を観測する衛星（ペイロードの説明）**
+
+| 資料 | 根拠になること |
+| --- | --- |
+| [COSMIC-2（UCAR）](https://www.cosmic.ucar.edu/what-we-do/cosmic-2) | GNSS の電波を使う電波掩蔽の観測衛星。データは数値天気予報と宇宙天気の解析に使われる |
+| [CYGNSS（NASA）](https://science.nasa.gov/mission/cygnss/) | 8機の小型衛星で海上の風速を測るミッション（Cyclone Global Navigation Satellite System） |
+

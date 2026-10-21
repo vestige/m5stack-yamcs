@@ -3,7 +3,7 @@
 M5Stack を人工衛星「M5Sat」に、Mac を地上の設備に見立てて、衛星の運用を模擬するシステムです。このページでは、何が何の役をしているかと、データの流れをまとめます。
 
 - 30分のデモの進め方は [demo.md](demo.md) を見てください
-- 操作の手順は [scenarios.md](scenarios.md)、本物の衛星運用との対応は [real-operations.md](real-operations.md) にあります
+- 操作の手順は [scenarios.md](scenarios.md)、本物の衛星運用との対応は [real-operations.md](real-operations.md) にあります。本物の運用の根拠になる公開資料は [real-operations.md の参考資料](real-operations.md#references) にまとめています
 - パケットの形式やコマンドの一覧などの仕様は、[README](../README.md) の Milestone 5 にあります
 
 ## 1. ひと目で見る
@@ -177,6 +177,7 @@ sequenceDiagram
 | 103 | 衛星 → 地上 | イベント（起きた出来事） | 何か起きたとき |
 | 104 | 衛星 → 地上 | 観測データ（衛星ごとの信号の強さ）。ミッションの成果物 | MISSION モードのとき、1秒ごと |
 | 110 | 地上 → 衛星 | コマンド | 運用者が送ったとき |
+| 111 | 地上 → 衛星 | 訓練用の異常（YAMCS を通らない） | 訓練の出題者が `tools/inject_fault.py` で送ったとき |
 
 ## 4. 運用モード
 
@@ -204,6 +205,7 @@ stateDiagram-v2
 | 異常を自分で検知して SAFE へ逃げる（FDIR） | 模擬している。GPS のケーブルを抜くと起きる |
 | 大事なコマンドの二人確認 | 模擬している（Queues） |
 | 運用手順書 | 模擬している（Procedures の Stacks） |
+| 運用の訓練（シミュレータに異常を入れる） | 模擬している。出題者が `tools/inject_fault.py` で、運用者に見えない経路から異常を起こす。本物と違い、衛星（M5Stack）がシミュレータの役も兼ねる |
 | 軌道・姿勢・電力・温度 | 模擬していない。M5Sat は机の上にある |
 | 電波の距離・遅延・雑音 | 模擬していない。M5Stack を持って離れると、本当に電波が弱くなって途切れる（ESP-NOW） |
 | パスの外のデータを衛星に記録して、あとで降ろす（ダンプ） | まだ。[issue #34](https://github.com/vestige/m5stack-yamcs/issues/34) |
@@ -222,6 +224,7 @@ stateDiagram-v2
 | パケットとコマンドの定義（MDB） | `yamcs/src/main/yamcs/mdb/m5sat.xml` |
 | 運用画面・手順書 | `yamcs/src/main/yamcs/displays/`、`yamcs/src/main/yamcs/stacks/` |
 | 運用の道具 | `tools/send_command.py`（コマンド）、`tools/plan_passes.py`（パスの計画） |
+| 訓練の道具 | `tools/inject_fault.py`（出題）、`tools/training_report.py`（振り返り）、`lib/Satellite/src/TrainingFault.h`（衛星側） |
 | 起動・停止 | `scripts/start.sh`、`scripts/stop.sh`、`scripts/status.sh` |
 | テスト | `test/`（PlatformIO の `native` 環境で、Mac の上で動く） |
 
