@@ -1,0 +1,1350 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "M5Sat のテレメトリの長い期間の傾向。運用 (コマンド、アラームの確認) は YAMCS の Web UI で行う",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 17,
+      "title": "いまの状態（最後に届いた値）",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "text",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "options": {
+                "MISSION": {
+                  "color": "#5794F2",
+                  "index": 2
+                },
+                "NOMINAL": {
+                  "color": "#73BF69",
+                  "index": 1
+                },
+                "SAFE": {
+                  "color": "#F2CC0C",
+                  "index": 0
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^\\/M5Sat\\/Bus\\/Mode$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/Mode",
+          "queryType": "ParameterValue",
+          "refId": "A"
+        }
+      ],
+      "title": "運用モード",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "電源を切っても数え続ける (NVS)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/BootCount",
+          "queryType": "ParameterValue",
+          "refId": "A"
+        }
+      ],
+      "title": "再起動の回数",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "起動してから",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/FaultCount",
+          "queryType": "ParameterValue",
+          "refId": "A"
+        }
+      ],
+      "title": "FDIR が異常を検知した回数",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "起動してから",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/CompletedObservations",
+          "queryType": "ParameterValue",
+          "refId": "A"
+        }
+      ],
+      "title": "完了した観測の回数",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "maxPages": 1,
+          "parameter": "/M5Sat/GNSS/TrackedGps",
+          "queryType": "ParameterSamples",
+          "refId": "A",
+          "stats": [
+            "AVG"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "maxPages": 1,
+          "parameter": "/M5Sat/GNSS/TrackedGlonass",
+          "queryType": "ParameterSamples",
+          "refId": "B",
+          "stats": [
+            "AVG"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "maxPages": 1,
+          "parameter": "/M5Sat/GNSS/TrackedGalileo",
+          "queryType": "ParameterSamples",
+          "refId": "C",
+          "stats": [
+            "AVG"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "maxPages": 1,
+          "parameter": "/M5Sat/GNSS/TrackedBeidou",
+          "queryType": "ParameterSamples",
+          "refId": "D",
+          "stats": [
+            "AVG"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "maxPages": 1,
+          "parameter": "/M5Sat/GNSS/TrackedQzss",
+          "queryType": "ParameterSamples",
+          "refId": "E",
+          "stats": [
+            "AVG"
+          ]
+        }
+      ],
+      "title": "衛星システムごとの捕捉数",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "id": 16,
+      "options": {
+        "basemap": {
+          "config": {},
+          "name": "Layer 0",
+          "noRepeat": false,
+          "type": "default"
+        },
+        "controls": {
+          "mouseWheelZoom": true,
+          "showAttribution": true,
+          "showDebug": false,
+          "showMeasure": false,
+          "showScale": false,
+          "showZoom": true
+        },
+        "layers": [
+          {
+            "config": {
+              "showLegend": true,
+              "style": {
+                "color": {
+                  "fixed": "super-light-red"
+                },
+                "opacity": 1,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 8,
+                  "max": 15,
+                  "min": 2
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "location": {
+              "latitude": "/M5Sat/GNSS/Latitude",
+              "longitude": "/M5Sat/GNSS/Longitude",
+              "mode": "coords"
+            },
+            "name": "Layer 1",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "tooltip": {
+          "mode": "details"
+        },
+        "view": {
+          "allLayers": true,
+          "dashboardVariable": false,
+          "id": "fit",
+          "lat": 0,
+          "lon": 0,
+          "noRepeat": false,
+          "zoom": 16
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "maxPages": 1,
+          "parameter": "/M5Sat/GNSS/Latitude",
+          "queryType": "ParameterValue",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "maxPages": 1,
+          "parameter": "/M5Sat/GNSS/Longitude",
+          "queryType": "ParameterValue",
+          "refId": "B"
+        }
+      ],
+      "title": "測位した位置",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "time",
+            "mode": "outer"
+          }
+        }
+      ],
+      "type": "geomap"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 18,
+      "title": "状態の移り変わり",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "時間帯ごとの値。灰色の空白は、テレメトリが届いていない時間 (衛星が止まっていた、パスの外など)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "fillOpacity": 70,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "ACTIVE": {
+                  "color": "#5794F2",
+                  "index": 7
+                },
+                "MISSION": {
+                  "color": "#5794F2",
+                  "index": 2
+                },
+                "NOMINAL": {
+                  "color": "#73BF69",
+                  "index": 1
+                },
+                "NONE": {
+                  "color": "#8E8E8E",
+                  "index": 5
+                },
+                "SAFE": {
+                  "color": "#F2CC0C",
+                  "index": 0
+                },
+                "SCHEDULED": {
+                  "color": "#FADE2A",
+                  "index": 6
+                },
+                "false": {
+                  "color": "#8E8E8E",
+                  "index": 4,
+                  "text": "OFF"
+                },
+                "true": {
+                  "color": "#73BF69",
+                  "index": 3,
+                  "text": "ON"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8E8E8E",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "運用モード"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ペイロード電源"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "観測の状態"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 7,
+      "options": {
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "showValue": "auto",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/Mode",
+          "queryType": "ParameterRanges",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/PayloadPower",
+          "queryType": "ParameterRanges",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/ObservationState",
+          "queryType": "ParameterRanges",
+          "refId": "C"
+        }
+      ],
+      "title": "運用モード・ペイロード電源・観測の状態",
+      "type": "state-timeline"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 19,
+      "title": "傾向（期間ごとの平均・最小・最大）",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "ESP-NOW の回線のときは Wi-Fi を使わないので 0 dBm になる",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dBm"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/WifiRssi",
+          "queryType": "ParameterSamples",
+          "refId": "A",
+          "stats": [
+            "AVG",
+            "MIN",
+            "MAX"
+          ]
+        }
+      ],
+      "title": "Wi-Fi の電波の強さ",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "MISSION のときだけ届く。捕捉している衛星の平均と最大",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dB-Hz"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/GNSS/AverageCn0",
+          "queryType": "ParameterSamples",
+          "refId": "A",
+          "stats": [
+            "AVG"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/GNSS/MaxCn0",
+          "queryType": "ParameterSamples",
+          "refId": "B",
+          "stats": [
+            "MAX"
+          ]
+        }
+      ],
+      "title": "観測データ: C/N0（信号の強さ）",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "測位に使っている衛星 (GNSS) と、信号を捕捉している衛星 (観測データ)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/GNSS/Satellites",
+          "queryType": "ParameterSamples",
+          "refId": "A",
+          "stats": [
+            "AVG"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/GNSS/TrackedCount",
+          "queryType": "ParameterSamples",
+          "refId": "B",
+          "stats": [
+            "AVG"
+          ]
+        }
+      ],
+      "title": "衛星の数",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "少しずつ減り続けていたら、メモリの使いすぎ (リーク) を疑う",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/FreeHeap",
+          "queryType": "ParameterSamples",
+          "refId": "A",
+          "stats": [
+            "MIN",
+            "AVG"
+          ]
+        }
+      ],
+      "title": "ヒープの空き",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 20,
+      "title": "イベント",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "FAULT_DETECTED、BOOT、MODE_CHANGED など (新しい順、最大200件)",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "message"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 700
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 14,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "time"
+          }
+        ]
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "queryType": "ListEvents",
+          "refId": "A"
+        }
+      ],
+      "title": "衛星からのイベント",
+      "type": "table"
+    }
+  ],
+  "preload": false,
+  "refresh": "30s",
+  "schemaVersion": 42,
+  "tags": [
+    "m5sat"
+  ],
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "M5Sat トレンド",
+  "uid": "m5sat-trends"
+}

@@ -713,3 +713,73 @@ python3 tools/training_report.py --list    # これまでの出題の一覧
 - **誤り検出**：TM / TCパケットにCRCを付け、壊れたパケットを捨てる
 - **ファイル転送**：観測データをファイルとしてまとめ、File transfer（CFDP）で地上へ送る
 - **運用の自動化**：Pythonの `yamcs-client` で、アラームの通知や日々の集計を自動化する
+
+### Grafana - 長い期間の傾向を見る
+
+YAMCS に残ったテレメトリを、Grafana のダッシュボードで見ます（[issue #21](https://github.com/vestige/m5stack-yamcs/issues/21)）。運用（コマンドの送信、承認、アラームの確認）は YAMCS の Web UI で行い、Grafana は長い期間の傾向を見るため、また運用者以外にも見せるために使います。役割の分け方は [docs/real-operations.md](docs/real-operations.md#displays) にまとめています。
+
+![M5Sat トレンドのダッシュボード（2026-10-19〜22）](docs/images/grafana-trends.png)
+
+**準備と起動**
+
+Grafana は Homebrew や Docker を使わず、公式の Mac 用の配布ファイルを `grafana/dist/`（git に入れないフォルダ）に展開して動かします。Mac の環境を汚さず、フォルダを消せば元どおりになります。
+
+```sh
+scripts/setup_grafana.sh   # 初回だけ。Grafana の配布ファイルと YAMCS のプラグインを取ってきて展開する
+scripts/start.sh           # YAMCS・受信スクリプトといっしょに Grafana も起動する
+```
+
+http://localhost:3000 を開くと、ダッシュボード「M5Sat トレンド」が出ます。見るだけならログインは要りません。編集するときは admin で入ります（最初のパスワードは admin。最初のログインで変えるように言われる）。
+
+| 項目 | 中身 |
+| --- | --- |
+| Grafana | 13.2.4（`scripts/common.sh` の `GRAFANA_VERSION`） |
+| データソース | YAMCS の開発元のプラグイン [yamcs-yamcs-datasource](https://github.com/yamcs/grafana-yamcs) 2.4.1。Grafana の公式のプラグイン一覧に無いので、署名なしを許可している（`grafana/grafana.ini`） |
+| 設定 | `grafana/grafana.ini`、データソース `grafana/provisioning/datasources/yamcs.yaml`、ダッシュボード `grafana/dashboards/m5sat-trends.json`。どれも git で管理し、起動のときに読み込む |
+| 保存データ | `grafana/data/`（git に入れない） |
+
+**ダッシュボード「M5Sat トレンド」**
+
+| 段 | パネル | 取り出し方（プラグインの問い合わせの種類） |
+| --- | --- | --- |
+| いまの状態 | 運用モード、再起動の回数、FDIR が異常を検知した回数、完了した観測の回数 | 最後に届いた値（ParameterValue） |
+| 観測と位置 | 衛星システムごとの捕捉数（GPS・GLONASS・Galileo・BeiDou・みちびきの積み上げ）、測位した位置（地図） | 期間ごとの平均（ParameterSamples）、最後に届いた緯度と経度を時刻で結合（ParameterValue + Join by field） |
+| 状態の移り変わり | 運用モード・ペイロード電源・観測の状態の帯 | 時間帯ごとの値（ParameterRanges） |
+| 傾向 | Wi-Fi の電波の強さ、C/N0、衛星の数、ヒープの空き | 期間ごとの平均・最小・最大（ParameterSamples） |
+| イベント | 衛星からのイベントの一覧 | ListEvents |
+
+表示の期間は右上で選びます（はじめは7日間）。M5Stack が動いていなくても、YAMCS に残っている過去のデータを見られます。
+
+**位置の情報に気をつける**：「測位した位置」の地図には、M5Stack を置いている場所がそのまま出ます。ダッシュボードの JSON には位置の値は入りません（地図は「Fit to data」で、届いた値に合わせて動かす）が、地図の画面のスクリーンショットを README や PR に載せないようにします。Grafana は自分の Mac（127.0.0.1）からしか開けない設定です。上の画像は、地図のパネルを足す前のものです。
+
+**データは同期していない**：Grafana は、画面を描くたびに YAMCS の API（`/api/archive/gnss/...`）へ、その期間のデータを問い合わせます。テレメトリをコピーして持っているわけではなく、Grafana が保存するのはダッシュボードなどの設定だけです。そのため、YAMCS が止まっていると何も出ません。
+
+**ダッシュボードを直す**
+
+ダッシュボードは `grafana/dashboards/m5sat-trends.json` に書いてあり、Grafana は起動のときと、そのあと約10秒ごとに読み込みます。直すときは Grafana の画面で直し、JSON に書き出してコミットします。
+
+| 手順 | 操作 |
+| --- | --- |
+| 1 | 右上の **Sign in** から admin で入る |
+| 2 | ダッシュボードの **Edit** で、パネルを足したり、動かしたり、問い合わせを変えたりする。パネルを足すときは、右側の **Add** の欄の **Panel** を押す |
+| 3 | **Save dashboard** で保存する（ここまでは Grafana の中にしか残らない） |
+| 4 | `python3 tools/grafana_export.py` で `grafana/dashboards/m5sat-trends.json` に書き出す |
+| 5 | `git diff` で変更を確かめてコミットする |
+
+JSON のファイルのほうを直接書き換えても構いません。ファイルのほうが新しければ、Grafana の中の内容はファイルで上書きされます。
+
+| JSON の部分 | 決めていること |
+| --- | --- |
+| `gridPos` | パネルの位置と大きさ（横を24に分けた方眼） |
+| `type` | パネルの種類（`stat`、`state-timeline`、`timeseries`、`table`） |
+| `targets` | YAMCS に何を聞くか（`queryType`、`parameter`、集計の `stats`） |
+| `fieldConfig` | 値の見せ方（単位、色、`true` → `ON` のような言い換え、帯の名前） |
+
+**わかったこと**
+
+- プラグインは見るだけで、コマンドの送信やアラームの確認はできない。Grafana から要求を出してコマンドを実行するところまでの検証は [issue #44](https://github.com/vestige/m5stack-yamcs/issues/44) で行う
+- プラグインは 2025年3月の版（Grafana 11 に対応）だが、Grafana 13.2.4 でも、パラメータの値・帯・集計・イベントのどれも表示できた
+- Grafana は YAMCS に定期的に問い合わせる（30秒ごとに更新）。YAMCS の Web UI のように、届いた瞬間には変わらない
+- Grafana 13 では、ファイルから読み込んだダッシュボードを画面で保存するには、読み込みの設定の `allowUiUpdates: true` に加えて、ダッシュボードが読み込み直されて印（`grafana.app/managerAllowsEdits`）が付く必要がある。設定を変えたら Grafana を再起動し、ダッシュボードの JSON に何か変更が入ったときに反映される
+- 観測した GNSS 衛星が空のどの方向へ動いたかを図や地図で見るアイデアは [issue #45](https://github.com/vestige/m5stack-yamcs/issues/45)
+

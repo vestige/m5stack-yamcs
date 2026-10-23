@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Mac側のプログラム (YAMCS と UDP受信スクリプト) をバックグラウンドで起動する
+# Mac側のプログラム (YAMCS、UDP受信スクリプト、Grafana) をバックグラウンドで起動する
 #
 #   M5Stack → :10015 udp_receiver.py (ログ記録) → :10016 YAMCS → http://localhost:8090
 #   M5Stack ← :10025 udp_receiver.py (TCの中継) ← :10025 YAMCS
 #   M5Stack ~ ESP-NOW ~ M5StickC ─USB─ udp_receiver.py   (.env に GROUND_STATION_SERIAL を書いたとき)
 #
-# ログ: logs/yamcs.log, logs/udp_receiver.log
+# ログ: logs/yamcs.log, logs/udp_receiver.log, logs/grafana.log
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
@@ -82,13 +82,53 @@ start_udp_receiver() {
   fi
 }
 
+start_grafana() {
+  if pid="$(running_pid grafana)"; then
+    echo "grafana: already running (pid $pid)"
+    return 0
+  fi
+  if [[ ! -x "$GRAFANA_HOME/bin/grafana" ]]; then
+    echo "grafana: まだ準備していないので起動しません (使うときは scripts/setup_grafana.sh)"
+    return 0
+  fi
+  echo "grafana: starting ($GRAFANA_VERSION)"
+  GF_PATHS_DATA="$GRAFANA_DIR/data" \
+    GF_PATHS_PLUGINS="$GRAFANA_DIR/data/plugins" \
+    GF_PATHS_LOGS="$LOG_DIR/grafana" \
+    GF_PATHS_PROVISIONING="$GRAFANA_DIR/provisioning" \
+    GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH="$GRAFANA_DIR/dashboards/m5sat-trends.json" \
+    M5SAT_GRAFANA_DASHBOARDS="$GRAFANA_DIR/dashboards" \
+    nohup "$GRAFANA_HOME/bin/grafana" server --homepath "$GRAFANA_HOME" --config "$GRAFANA_DIR/grafana.ini" \
+    >"$(log_file grafana)" 2>&1 &
+  echo $! >"$(pid_file grafana)"
+  echo -n "grafana: waiting for $GRAFANA_URL "
+  local i
+  for ((i = 0; i < 60; i++)); do
+    if curl -sf "$GRAFANA_URL/api/health" >/dev/null 2>&1; then
+      echo " ready"
+      return 0
+    fi
+    if ! running_pid grafana >/dev/null; then
+      echo " failed"
+      echo "grafana: 起動に失敗しました。ログを確認してください: $(log_file grafana)" >&2
+      tail -20 "$(log_file grafana)" >&2
+      exit 1
+    fi
+    echo -n "."
+    sleep 1
+  done
+  echo " timeout"
+}
+
 start_yamcs
 start_udp_receiver
+start_grafana
 
 cat <<EOF
 
 起動しました。
   YAMCS Web UI : $YAMCS_URL
+  Grafana      : $GRAFANA_URL  (scripts/setup_grafana.sh で準備したとき)
   受信ログ     : tail -f logs/udp_receiver.log
   YAMCSログ    : tail -f logs/yamcs.log
   停止         : scripts/stop.sh

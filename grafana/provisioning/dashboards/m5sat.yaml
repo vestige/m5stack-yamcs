@@ -1,0 +1,11 @@
+# grafana/dashboards/ の JSON をダッシュボードとして読み込む。M5SAT_GRAFANA_DASHBOARDS は start.sh が渡す。
+# Grafana の画面で直して保存できる (Grafana の中に保存される)。ファイルに戻すには tools/grafana_export.py を使う。
+# ファイルのほうが新しくなると、ファイルの内容で上書きされる
+apiVersion: 1
+providers:
+  - name: M5Sat
+    folder: M5Sat
+    type: file
+    allowUiUpdates: true
+    options:
+      path: ${M5SAT_GRAFANA_DASHBOARDS}

@@ -124,6 +124,8 @@ Mac の `tools/udp_receiver.py` は、地上局の中で、電波と管制局の
 | Timeline | パスと観測の計画。予定の時刻に手順を自動で始める | `tools/plan_passes.py` |
 | Archive | 届いたものを全部残し、あとから振り返る | `yamcs/target/yamcs/yamcs-data/` |
 
+管制局の外では、**Grafana**（http://localhost:3000）で、YAMCS に残ったテレメトリの長い期間の傾向を見られます。Grafana は見るだけで、運用は YAMCS で行います（`grafana/`、README の「Grafana」）。
+
 YAMCS と中継プログラムは `scripts/start.sh` でまとめて起動し、`scripts/stop.sh` で止めます。
 
 ## 3. データの流れ
@@ -225,6 +227,7 @@ stateDiagram-v2
 | 運用画面・手順書 | `yamcs/src/main/yamcs/displays/`、`yamcs/src/main/yamcs/stacks/` |
 | 運用の道具 | `tools/send_command.py`（コマンド）、`tools/plan_passes.py`（パスの計画） |
 | 訓練の道具 | `tools/inject_fault.py`（出題）、`tools/training_report.py`（振り返り）、`lib/Satellite/src/TrainingFault.h`（衛星側） |
+| 傾向を見るダッシュボード（Grafana） | `grafana/`（設定・データソース・ダッシュボード）、`scripts/setup_grafana.sh`（準備） |
 | 起動・停止 | `scripts/start.sh`、`scripts/stop.sh`、`scripts/status.sh` |
 | テスト | `test/`（PlatformIO の `native` 環境で、Mac の上で動く） |
 

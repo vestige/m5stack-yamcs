@@ -1,0 +1,12 @@
+# YAMCS への接続。Grafana のサーバーが間に入って YAMCS の API へ中継する (access: proxy)
+apiVersion: 1
+datasources:
+  - name: YAMCS
+    uid: yamcs
+    type: yamcs-yamcs-datasource
+    access: proxy
+    url: http://localhost:8090
+    isDefault: true
+    editable: false
+    jsonData:
+      instance: gnss
