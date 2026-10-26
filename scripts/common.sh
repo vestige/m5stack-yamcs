@@ -13,6 +13,14 @@ YAMCS_TM_PORT=10016
 UPLINK_PORT=10025
 YAMCS_URL="http://localhost:8090"
 
+# Grafana (#21)。公式の配布ファイルを grafana/dist/ に展開して使う (scripts/setup_grafana.sh)
+# プラグイン yamcs-yamcs-datasource は Grafana 11 に合わせて作られている。新しい版で動かなければ下げる
+GRAFANA_VERSION="13.2.4"
+GRAFANA_PLUGIN_VERSION="2.4.1"
+GRAFANA_DIR="$ROOT_DIR/grafana"
+GRAFANA_HOME="$GRAFANA_DIR/dist/grafana-$GRAFANA_VERSION"
+GRAFANA_URL="http://localhost:3000"
+
 # 地上局の無線機 (M5StickC) のシリアルポート。.env に書けば受信スクリプトがESP-NOWの回線も使う
 #   GROUND_STATION_SERIAL=/dev/cu.usbserial-XXXX
 GROUND_STATION_SERIAL=""
@@ -22,7 +30,7 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
 fi
 
 # 管理するプロセス (起動順)
-SERVICES=(yamcs udp_receiver)
+SERVICES=(yamcs udp_receiver grafana)
 
 pid_file() { echo "$RUN_DIR/$1.pid"; }
 log_file() { echo "$LOG_DIR/$1.log"; }

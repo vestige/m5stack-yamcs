@@ -23,3 +23,7 @@ yamcs/target/
 # scripts/start.sh の実行時ファイル
 .run/
 logs/
+
+# Grafana (scripts/setup_grafana.sh で展開した配布ファイルと、Grafana の保存データ)
+grafana/dist/
+grafana/data/
