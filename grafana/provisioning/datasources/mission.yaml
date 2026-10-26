@@ -1,0 +1,11 @@
+# ミッション要求サービス (tools/mission_api.py) の要求の一覧を、Infinity のデータソースで読む (#44)。
+# Infinity は、許した宛先 (allowedHosts) にしか問い合わせない
+apiVersion: 1
+datasources:
+  - name: ミッション要求
+    uid: mission
+    type: yesoreyeram-infinity-datasource
+    editable: false
+    jsonData:
+      allowedHosts:
+        - http://localhost:8095

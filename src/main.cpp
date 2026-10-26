@@ -110,6 +110,7 @@ void refreshDisplay(uint32_t now) {
   groundLink.describe(linkStatus, sizeof(linkStatus));
   display.setLinkStatus(linkStatus, groundLink.connected());
   display.setSatelliteStatus(satellite.mode(), satellite.payloadPower());
+  display.setLamp(satellite.lampColor(), satellite.lampRemainingSec(now));
   display.draw(gnss.parser(), gnss.receiving(now));
 }
 
@@ -146,6 +147,7 @@ void loop() {
   if (gnss.takeNewUtc(&utc)) satellite.syncTime(utc, millis());
   satellite.checkHealth(millis(), gnss.lastSentenceMs());
   satellite.updateObservation(millis());
+  satellite.updateLamp(millis());
   sendEvents();
   payloadLed.show(satellite.payloadPower());
 

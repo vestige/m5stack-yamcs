@@ -24,6 +24,7 @@ enum class CommandId : uint8_t {
   SetFdir = 7,
   ScheduleObservation = 8,  // uint32 開始時刻 (Unix秒), uint16 長さ (秒)
   CancelObservation = 9,
+  SetLamp = 10,  // uint8 色 (LampColor), uint16 点灯時間 (秒)。ミッション要求で使う
 };
 
 // コマンドを拒否・失敗した理由 (ACKで地上へ返す)

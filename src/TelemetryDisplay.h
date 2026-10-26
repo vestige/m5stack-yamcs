@@ -17,6 +17,8 @@ class TelemetryDisplay {
   void setLinkStatus(const char* text, bool ok);
   // ヘッダに出す衛星の状態
   void setSatelliteStatus(Satellite::OperationMode mode, bool payloadPower);
+  // ミッション要求のランプ (SET_LAMP)。点いている間、どのページでも右下に色の丸を出す
+  void setLamp(Satellite::LampColor color, uint16_t remainingSec);
 
   // receiving: 直近でNMEAを受信できているか
   void draw(const NmeaParser& parser, bool receiving);
@@ -29,6 +31,7 @@ class TelemetryDisplay {
   void drawHeader(const char* title, const GnssTelemetry& t, bool receiving);
   void drawButtonLabels();
   void drawRow(int index, const char* label, const char* value, uint16_t color);
+  void drawLamp();
 
   M5Canvas canvas_{&M5.Display};
   Page page_ = Page::Telemetry;
@@ -36,4 +39,6 @@ class TelemetryDisplay {
   bool linkOk_ = false;
   Satellite::OperationMode mode_ = Satellite::OperationMode::Nominal;
   bool payloadPower_ = true;
+  Satellite::LampColor lampColor_ = Satellite::LampColor::Off;
+  uint16_t lampRemainingSec_ = 0;
 };

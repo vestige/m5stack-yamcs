@@ -16,6 +16,7 @@ class Satellite {
   using Fault = HousekeepingPacket::Fault;
   using ObservationState = HousekeepingPacket::ObservationState;
   using ObservationResult = HousekeepingPacket::ObservationResult;
+  using LampColor = HousekeepingPacket::LampColor;
 
   static const uint16_t kMinTmIntervalMs = 200;
   static const uint16_t kMaxTmIntervalMs = 10000;
@@ -28,6 +29,13 @@ class Satellite {
   static const uint32_t kGnssStartupTimeoutMs = 30000;
   static const uint16_t kMinObservationSec = 10;
   static const uint16_t kMaxObservationSec = 3600;
+  static const uint16_t kMaxLampSec = 600;
+
+  // ランプを消した理由 (LampOff の arg2)
+  static const uint16_t kLampOffByCommand = 0;
+  static const uint16_t kLampOffExpired = 1;
+  static const uint16_t kLampOffSafe = 2;
+  static const uint16_t kLampOffPayloadOff = 3;
 
   // 観測を見送った理由 (ObservationSkipped の arg1)
   static const uint16_t kSkippedPayloadOff = 1;
@@ -54,6 +62,8 @@ class Satellite {
   void syncTime(uint32_t utcSec, uint32_t nowMs) { clock_.sync(utcSec, nowMs); }
   // 時刻指定の観測: 予約した時刻に MISSION へ移り、長さが過ぎたら NOMINAL へ戻る
   void updateObservation(uint32_t nowMs);
+  // ミッション要求のランプ: 点灯時間が過ぎたら消す
+  void updateLamp(uint32_t nowMs);
 
   // 地上へ知らせるイベントを溜める / 取り出す
   void report(const EventPacket::Event& event) { events_.push(event); }
@@ -71,6 +81,9 @@ class Satellite {
   const OnboardClock& clock() const { return clock_; }
   ObservationState observationState() const { return observationState_; }
   ObservationResult lastObservationResult() const { return lastObservationResult_; }
+  LampColor lampColor() const { return lampColor_; }
+  // ランプが消えるまでの秒数 (消えていれば0)
+  uint16_t lampRemainingSec(uint32_t nowMs) const;
 
   // HKのうちバスの状態に関する項目を埋める
   void fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const;
@@ -87,6 +100,7 @@ class Satellite {
   void endObservation(bool completed);
   // 最後の観測の結果を覚える (HKで送り続ける)
   void recordObservation(ObservationResult result, uint32_t startSec, uint32_t endSec);
+  void turnLampOff(uint16_t reason);
 
   OperationMode mode_ = OperationMode::Nominal;
   bool payloadPower_ = true;
@@ -114,6 +128,9 @@ class Satellite {
   uint32_t lastObservationStart_ = 0;
   uint16_t lastObservationLength_ = 0;
   uint16_t completedObservations_ = 0;
+
+  LampColor lampColor_ = LampColor::Off;
+  uint32_t lampUntilMs_ = 0;
 
   EventQueue events_;
 };

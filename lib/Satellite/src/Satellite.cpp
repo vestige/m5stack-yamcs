@@ -24,6 +24,7 @@ int argsLengthOf(uint8_t commandId) {
     case CommandId::SetFdir: return 1;
     case CommandId::ScheduleObservation: return 6;
     case CommandId::CancelObservation: return 0;
+    case CommandId::SetLamp: return 3;
   }
   return -1;
 }
@@ -98,6 +99,18 @@ ErrorCode Satellite::validate(const Telecommand::Packet& tc) const {
     case CommandId::CancelObservation:
       if (observationState_ == ObservationState::None) return ErrorCode::NotAllowed;
       return ErrorCode::None;
+    case CommandId::SetLamp: {
+      uint8_t color = tc.args[0];
+      uint16_t duration = readU16(tc.args + 1);
+      if (color > static_cast<uint8_t>(LampColor::White)) return ErrorCode::InvalidArgument;
+      if (static_cast<LampColor>(color) == LampColor::Off) return ErrorCode::None;  // 消すのはいつでもよい
+      if (duration < 1 || duration > kMaxLampSec) return ErrorCode::InvalidArgument;
+      // SAFE は異常からの退避中なので、ペイロードの操作 (ミッション要求) は受けない
+      if (mode_ == OperationMode::Safe) return ErrorCode::NotAllowed;
+      // ランプはペイロードの機器なので、電源が入っていなければ点けられない
+      if (!payloadPower_) return ErrorCode::NotAllowed;
+      return ErrorCode::None;
+    }
     default:
       return ErrorCode::None;
   }
@@ -147,6 +160,18 @@ void Satellite::execute(const Telecommand::Packet& tc, Result* result) {
       uint32_t untilStart = observationStart_ - clock_.now(nowMs_);
       reportInfo(EventId::ObservationScheduled, untilStart > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(untilStart),
                  observationDuration_);
+      break;
+    }
+    case CommandId::SetLamp: {
+      LampColor color = static_cast<LampColor>(tc.args[0]);
+      if (color == LampColor::Off) {
+        turnLampOff(kLampOffByCommand);
+        break;
+      }
+      uint16_t duration = readU16(tc.args + 1);
+      lampColor_ = color;
+      lampUntilMs_ = nowMs_ + static_cast<uint32_t>(duration) * 1000;
+      reportInfo(EventId::LampOn, static_cast<uint16_t>(color), duration);
       break;
     }
     case CommandId::CancelObservation: {
@@ -269,11 +294,31 @@ void Satellite::changeMode(OperationMode mode) {
   if (mode == mode_) return;
   reportInfo(EventId::ModeChanged, static_cast<uint16_t>(mode_), static_cast<uint16_t>(mode));
   mode_ = mode;
+  if (mode == OperationMode::Safe) turnLampOff(kLampOffSafe);
+}
+
+void Satellite::updateLamp(uint32_t nowMs) {
+  nowMs_ = nowMs;
+  if (lampColor_ != LampColor::Off && static_cast<int32_t>(nowMs - lampUntilMs_) >= 0) turnLampOff(kLampOffExpired);
+}
+
+void Satellite::turnLampOff(uint16_t reason) {
+  if (lampColor_ == LampColor::Off) return;
+  LampColor previous = lampColor_;
+  lampColor_ = LampColor::Off;
+  reportInfo(EventId::LampOff, static_cast<uint16_t>(previous), reason);
+}
+
+uint16_t Satellite::lampRemainingSec(uint32_t nowMs) const {
+  if (lampColor_ == LampColor::Off) return 0;
+  int32_t remainingMs = static_cast<int32_t>(lampUntilMs_ - nowMs);
+  return remainingMs <= 0 ? 0 : static_cast<uint16_t>((remainingMs + 999) / 1000);
 }
 
 void Satellite::changePayloadPower(bool on) {
   if (on == payloadPower_) return;
   payloadPower_ = on;
+  if (!on) turnLampOff(kLampOffPayloadOff);
   reportInfo(EventId::PayloadPowerChanged, on ? 1 : 0);
 }
 
@@ -303,6 +348,8 @@ void Satellite::fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const {
   hk->lastObservationStart = lastObservationStart_;
   hk->lastObservationLength = lastObservationLength_;
   hk->completedObservations = completedObservations_;
+  hk->lampColor = lampColor_;
+  hk->lampRemaining = lampRemainingSec(nowMs_);
 }
 
 const char* Satellite::modeName(OperationMode mode) {

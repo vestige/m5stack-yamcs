@@ -43,8 +43,8 @@ APID_TRAINING = 111  # 訓練用の異常 (tools/inject_fault.py)。YAMCS を通
 GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
 # mode, payloadPower, accepted, rejected, lastCommand, rssi, freeHeap, minFreeHeap, uptime, bootCount, resetReason,
 # fdirEnabled, lastFault, faultCount, onboardTime, observationState, observationStart, observationDuration,
-# lastObservationResult, lastObservationStart, lastObservationLength, completedObservations
-HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHH")
+# lastObservationResult, lastObservationStart, lastObservationLength, completedObservations, lampColor, lampRemaining
+HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHHBH")
 # tcSequence, commandId, stage, errorCode
 ACK_PAYLOAD = struct.Struct(">HBBB")
 # severity, eventId, arg1, arg2
@@ -55,6 +55,7 @@ OBSERVATION_HEADER = struct.Struct(">IBBBBBBBBB")
 OBSERVATION_ENTRY = struct.Struct(">BBbHB")
 GNSS_SYSTEM = {0: "G", 1: "R", 2: "E", 3: "C", 4: "J", 5: "I"}
 OBSERVATION_STATE = {0: "NONE", 1: "SCHEDULED", 2: "ACTIVE"}
+LAMP_COLOR = {0: "OFF", 1: "RED", 2: "GREEN", 3: "BLUE", 4: "YELLOW", 5: "CYAN", 6: "MAGENTA", 7: "WHITE"}
 OBSERVATION_RESULT = {0: "NONE", 1: "COMPLETED", 2: "ABORTED", 3: "SKIPPED_PAYLOAD_OFF",
                       4: "SKIPPED_NOT_NOMINAL", 5: "CANCELLED"}
 
@@ -77,6 +78,7 @@ COMMAND = {
     7: "SET_FDIR",
     8: "SCHEDULE_OBSERVATION",
     9: "CANCEL_OBSERVATION",
+    10: "SET_LAMP",
 }
 FAULT = {0: "NONE", 1: "GNSS_NO_DATA"}
 ACK_STAGE = {1: "ACCEPTED", 2: "REJECTED", 3: "COMPLETED", 4: "FAILED"}
@@ -103,6 +105,8 @@ EVENT_ID = {
     11: "OBSERVATION_ENDED",
     12: "OBSERVATION_SKIPPED",
     13: "OBSERVATION_CANCELLED",
+    14: "LAMP_ON",
+    15: "LAMP_OFF",
 }
 # ESP-IDF の esp_reset_reason_t
 RESET_REASON = {
@@ -166,7 +170,8 @@ def format_gnss(data):
 def format_housekeeping(data):
     (mode, payload, accepted, rejected, last_command, rssi, free_heap, min_free_heap, uptime, boot_count,
      reset_reason, fdir, last_fault, fault_count, onboard_time, obs_state, obs_start,
-     obs_duration, last_result, last_start, last_length, completed) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
+     obs_duration, last_result, last_start, last_length, completed, lamp_color,
+     lamp_remaining) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
     return (
         f"HK   mode={MODE.get(mode, mode)} payload={'ON' if payload else 'OFF'} "
         f"cmd(ok={accepted} ng={rejected} last={COMMAND.get(last_command, 'NONE')}) rssi={rssi}dBm "
@@ -178,6 +183,7 @@ def format_housekeeping(data):
         + f" last_obs={OBSERVATION_RESULT.get(last_result, last_result)}"
         + (f"({format_utc(last_start)} {last_length}s)" if last_result else "")
         + f" done={completed}"
+        + (f" lamp={LAMP_COLOR.get(lamp_color, lamp_color)}({lamp_remaining}s)" if lamp_color else "")
     )
 
 

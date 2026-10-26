@@ -34,6 +34,8 @@ enum class EventId : uint8_t {
   ObservationEnded = 11,      // arg1: 0=完了, 1=中断
   ObservationSkipped = 12,    // arg1: 1=ペイロードがOFF, 2=NOMINALでない (arg2: そのときのモード)
   ObservationCancelled = 13,  // arg1: 0=予約を取り消した, 1=観測中に取り消した
+  LampOn = 14,                // arg1: 色 (LampColor), arg2: 点灯時間 (秒)
+  LampOff = 15,               // arg1: 消す前の色, arg2: 0=コマンドで消した, 1=時間が来た, 2=SAFEになった, 3=ペイロードの電源が切れた
 };
 
 struct Event {

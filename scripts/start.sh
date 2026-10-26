@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Mac側のプログラム (YAMCS、UDP受信スクリプト、Grafana) をバックグラウンドで起動する
+# Mac側のプログラム (YAMCS、UDP受信スクリプト、ミッション要求サービス、Grafana) をバックグラウンドで起動する
 #
 #   M5Stack → :10015 udp_receiver.py (ログ記録) → :10016 YAMCS → http://localhost:8090
 #   M5Stack ← :10025 udp_receiver.py (TCの中継) ← :10025 YAMCS
 #   M5Stack ~ ESP-NOW ~ M5StickC ─USB─ udp_receiver.py   (.env に GROUND_STATION_SERIAL を書いたとき)
 #
-# ログ: logs/yamcs.log, logs/udp_receiver.log, logs/grafana.log
+# ログ: logs/yamcs.log, logs/udp_receiver.log, logs/mission_api.log, logs/grafana.log
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
@@ -82,6 +82,23 @@ start_udp_receiver() {
   fi
 }
 
+start_mission_api() {
+  if pid="$(running_pid mission_api)"; then
+    echo "mission_api: already running (pid $pid)"
+    return 0
+  fi
+  echo "mission_api: starting (http://127.0.0.1:$MISSION_API_PORT)"
+  nohup "$(find_python)" -u "$ROOT_DIR/tools/mission_api.py" --port "$MISSION_API_PORT" --yamcs "$YAMCS_URL" \
+    >"$(log_file mission_api)" 2>&1 &
+  echo $! >"$(pid_file mission_api)"
+  sleep 1
+  if ! running_pid mission_api >/dev/null; then
+    echo "mission_api: 起動に失敗しました。ポート$MISSION_API_PORTを他のプログラムが使っていないか確認してください" >&2
+    cat "$(log_file mission_api)" >&2
+    exit 1
+  fi
+}
+
 start_grafana() {
   if pid="$(running_pid grafana)"; then
     echo "grafana: already running (pid $pid)"
@@ -122,6 +139,7 @@ start_grafana() {
 
 start_yamcs
 start_udp_receiver
+start_mission_api
 start_grafana
 
 cat <<EOF
@@ -129,6 +147,7 @@ cat <<EOF
 起動しました。
   YAMCS Web UI : $YAMCS_URL
   Grafana      : $GRAFANA_URL  (scripts/setup_grafana.sh で準備したとき)
+  ミッション要求: http://127.0.0.1:$MISSION_API_PORT/requests
   受信ログ     : tail -f logs/udp_receiver.log
   YAMCSログ    : tail -f logs/yamcs.log
   停止         : scripts/stop.sh
