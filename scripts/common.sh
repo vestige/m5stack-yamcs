@@ -17,9 +17,15 @@ YAMCS_URL="http://localhost:8090"
 # プラグイン yamcs-yamcs-datasource は Grafana 11 に合わせて作られている。新しい版で動かなければ下げる
 GRAFANA_VERSION="13.2.4"
 GRAFANA_PLUGIN_VERSION="2.4.1"
+# Grafana の公式のプラグイン一覧から入れるプラグイン (#44)。署名あり
+#   volkovlabs-form-panel: 要求を入力するフォーム、yesoreyeram-infinity-datasource: ミッション要求サービスの一覧を読む
+GRAFANA_CATALOG_PLUGINS=("volkovlabs-form-panel@6.3.5" "yesoreyeram-infinity-datasource@4.1.3")
 GRAFANA_DIR="$ROOT_DIR/grafana"
 GRAFANA_HOME="$GRAFANA_DIR/dist/grafana-$GRAFANA_VERSION"
 GRAFANA_URL="http://localhost:3000"
+
+# ミッション要求サービス (#44)。Grafana のフォームから要求を受け、YAMCS のコマンドにする
+MISSION_API_PORT=8095
 
 # 地上局の無線機 (M5StickC) のシリアルポート。.env に書けば受信スクリプトがESP-NOWの回線も使う
 #   GROUND_STATION_SERIAL=/dev/cu.usbserial-XXXX
@@ -30,7 +36,7 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
 fi
 
 # 管理するプロセス (起動順)
-SERVICES=(yamcs udp_receiver grafana)
+SERVICES=(yamcs udp_receiver mission_api grafana)
 
 pid_file() { echo "$RUN_DIR/$1.pid"; }
 log_file() { echo "$LOG_DIR/$1.log"; }

@@ -133,6 +133,19 @@
 						</EnumerationAlarmList>
 					</DefaultAlarm>
 				</EnumeratedParameterType>
+				<EnumeratedParameterType name="Lamp_Color_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="OFF" />
+						<Enumeration value="1" label="RED" />
+						<Enumeration value="2" label="GREEN" />
+						<Enumeration value="3" label="BLUE" />
+						<Enumeration value="4" label="YELLOW" />
+						<Enumeration value="5" label="CYAN" />
+						<Enumeration value="6" label="MAGENTA" />
+						<Enumeration value="7" label="WHITE" />
+					</EnumerationList>
+				</EnumeratedParameterType>
 				<IntegerParameterType name="Observation_Count_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="16" />
 				</IntegerParameterType>
@@ -161,6 +174,7 @@
 						<Enumeration value="7" label="SET_FDIR" />
 						<Enumeration value="8" label="SCHEDULE_OBSERVATION" />
 						<Enumeration value="9" label="CANCEL_OBSERVATION" />
+						<Enumeration value="10" label="SET_LAMP" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Tc_Sequence_Type" signed="false">
@@ -202,6 +216,8 @@
 						<Enumeration value="11" label="OBSERVATION_ENDED" />
 						<Enumeration value="12" label="OBSERVATION_SKIPPED" />
 						<Enumeration value="13" label="OBSERVATION_CANCELLED" />
+						<Enumeration value="14" label="LAMP_ON" />
+						<Enumeration value="15" label="LAMP_OFF" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Event_Arg_Type" signed="false">
@@ -281,6 +297,8 @@
 				<Parameter name="LastObservationStart" parameterTypeRef="Unix_Time_Type" shortDescription="最後の観測を実際に始めた時刻 (見送り・開始前の取り消しは予約の時刻)" />
 				<Parameter name="LastObservationLength" parameterTypeRef="Seconds_Type" shortDescription="最後の観測で実際に観測した長さ" />
 				<Parameter name="CompletedObservations" parameterTypeRef="Observation_Count_Type" shortDescription="完了した観測の回数" />
+				<Parameter name="LampColor" parameterTypeRef="Lamp_Color_Type" shortDescription="ミッション要求のランプの色 (OFF=消えている)" />
+				<Parameter name="LampRemaining" parameterTypeRef="Seconds_Type" shortDescription="ランプが消えるまでの時間" />
 				<Parameter name="AckTcSequence" parameterTypeRef="Tc_Sequence_Type" shortDescription="ACK: どのTC (シーケンス番号) への応答か" />
 				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
 				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
@@ -319,6 +337,8 @@
 						<ParameterRefEntry parameterRef="LastObservationStart" />
 						<ParameterRefEntry parameterRef="LastObservationLength" />
 						<ParameterRefEntry parameterRef="CompletedObservations" />
+						<ParameterRefEntry parameterRef="LampColor" />
+						<ParameterRefEntry parameterRef="LampRemaining" />
 					</EntryList>
 					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
 						<RestrictionCriteria>
@@ -378,7 +398,10 @@ if (Yamcs.processorName() != "realtime") return;
 
 var MODE = ["SAFE", "NOMINAL", "MISSION"];
 var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP", "SET_FDIR",
-               "SCHEDULE_OBSERVATION", "CANCEL_OBSERVATION"];
+               "SCHEDULE_OBSERVATION", "CANCEL_OBSERVATION", "SET_LAMP"];
+var LAMP = ["OFF", "RED", "GREEN", "BLUE", "YELLOW", "CYAN", "MAGENTA", "WHITE"];
+var LAMP_OFF_REASON = ["コマンドで消しました", "点灯時間が過ぎました", "SAFE になったので消しました",
+                       "ペイロードの電源が切れたので消しました"];
 var FAULT = ["NONE", "GNSSのデータが届きません"];
 var ERROR = ["", "知らないコマンドです", "引数の長さが違います", "引数が範囲外です",
              "今の状態では実行できません", "TCパケットとして不正です"];
@@ -430,6 +453,12 @@ switch (eventId.value) {
     break;
   case "OBSERVATION_CANCELLED":
     message = a1 == 1 ? "観測中の観測を取り消しました" : "観測の予約を取り消しました";
+    break;
+  case "LAMP_ON":
+    message = "ランプを " + name(LAMP, a1) + " で点けました (" + a2 + "秒間)";
+    break;
+  case "LAMP_OFF":
+    message = "ランプ (" + name(LAMP, a1) + ") を消しました: " + name(LAMP_OFF_REASON, a2);
     break;
   default:
     message = "不明なイベント (" + eventId.rawValue + ", " + a1 + ", " + a2 + ")";
@@ -504,6 +533,29 @@ switch (severity.value) {
 					<IntegerDataEncoding sizeInBits="16" />
 					<ValidRangeSet>
 						<ValidRange minInclusive="10" maxInclusive="3600" />
+					</ValidRangeSet>
+				</IntegerArgumentType>
+				<EnumeratedArgumentType name="Lamp_Color_Arg_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="OFF" />
+						<Enumeration value="1" label="RED" />
+						<Enumeration value="2" label="GREEN" />
+						<Enumeration value="3" label="BLUE" />
+						<Enumeration value="4" label="YELLOW" />
+						<Enumeration value="5" label="CYAN" />
+						<Enumeration value="6" label="MAGENTA" />
+						<Enumeration value="7" label="WHITE" />
+					</EnumerationList>
+				</EnumeratedArgumentType>
+				<!-- OFF のときは使わないので 0 も許す。点けるときの 1 秒以上は、送信の前提条件で確かめる -->
+				<IntegerArgumentType name="Lamp_Duration_Arg_Type" signed="false">
+					<UnitSet>
+						<Unit>s</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="16" />
+					<ValidRangeSet>
+						<ValidRange minInclusive="0" maxInclusive="600" />
 					</ValidRangeSet>
 				</IntegerArgumentType>
 				<IntegerArgumentType name="Beep_Duration_Arg_Type" signed="false">
@@ -760,6 +812,56 @@ switch (severity.value) {
 						<BaseContainer containerRef="M5SatCommand" />
 					</CommandContainer>
 					<DefaultSignificance consequenceLevel="critical" reasonForWarning="観測中なら、衛星はNOMINALモードへ戻ります" />
+				</MetaCommand>
+				<MetaCommand name="SET_LAMP" shortDescription="ミッション要求のランプを、指定した色で指定した時間だけ点ける (OFF で消す)">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="10" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="Color" argumentTypeRef="Lamp_Color_Arg_Type" />
+						<Argument name="Duration" argumentTypeRef="Lamp_Duration_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="SET_LAMP">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="Color" />
+							<ArgumentRefEntry argumentRef="Duration" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+					<!-- 点けるときは 1 秒以上。SAFE の間と、ペイロードの電源が切れている間は点けない (消すのはいつでもよい)。衛星側でも同じことを確かめる -->
+					<TransmissionConstraintList>
+						<TransmissionConstraint>
+							<BooleanExpression>
+								<ORedConditions>
+									<Condition>
+										<ParameterInstanceRef parameterRef="/yamcs/cmd/arg/Color" />
+										<ComparisonOperator>==</ComparisonOperator>
+										<Value>OFF</Value>
+									</Condition>
+									<ANDedConditions>
+										<Condition>
+											<ParameterInstanceRef parameterRef="/yamcs/cmd/arg/Duration" />
+											<ComparisonOperator>&gt;=</ComparisonOperator>
+											<Value>1</Value>
+										</Condition>
+										<Condition>
+											<ParameterInstanceRef parameterRef="Mode" />
+											<ComparisonOperator>!=</ComparisonOperator>
+											<Value>SAFE</Value>
+										</Condition>
+										<Condition>
+											<ParameterInstanceRef parameterRef="PayloadPower" />
+											<ComparisonOperator>==</ComparisonOperator>
+											<Value>ON</Value>
+										</Condition>
+									</ANDedConditions>
+								</ORedConditions>
+							</BooleanExpression>
+						</TransmissionConstraint>
+					</TransmissionConstraintList>
+					<DefaultSignificance consequenceLevel="critical" reasonForWarning="ミッション要求により、ペイロード (ランプ) を操作します" />
 				</MetaCommand>
 			</MetaCommandSet>
 		</CommandMetaData>

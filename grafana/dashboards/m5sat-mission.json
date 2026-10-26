@@ -1,0 +1,635 @@
+{
+  "uid": "m5sat-mission",
+  "title": "M5Sat ミッション要求",
+  "tags": [
+    "m5sat"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "description": "利用者がランプの色と時間を要求し、運用者の承認を経て、衛星が実行したことをテレメトリで確かめる (#44)",
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "schemaVersion": 39,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "volkovlabs-form-panel",
+      "title": "ミッション要求を出す",
+      "description": "利用者は「何をしたいか」(色と時間) だけを出す。ミッション要求サービスが検査して SET_LAMP のコマンドにし、YAMCS の Queues で運用者が承認してから衛星へ送る",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 10
+      },
+      "options": {
+        "layout": {
+          "variant": "single",
+          "orientation": "horizontal",
+          "padding": 10,
+          "sections": []
+        },
+        "initial": {
+          "method": "-",
+          "code": "",
+          "contentType": "application/json",
+          "highlight": false,
+          "highlightColor": "red"
+        },
+        "updateEnabled": "auto",
+        "update": {
+          "method": "POST",
+          "url": "http://localhost:8095/requests",
+          "contentType": "application/json",
+          "payloadMode": "all",
+          "confirm": false,
+          "header": [],
+          "code": "// ミッション要求サービスの応答 (受け付けた / 断った理由) を、そのまま通知に出す\nconst response = context.panel.response;\nif (!response) {\n  context.grafana.notifyError(['ミッション要求', 'ミッション要求サービスにつながりません']);\n  return;\n}\nreturn response.clone().json().then((body) => {\n  if (response.ok && body.accepted) {\n    context.grafana.notifySuccess(['ミッション要求', body.message]);\n  } else {\n    context.grafana.notifyError(['ミッション要求', body.message || `断られました (${response.status})`]);\n  }\n  context.grafana.refresh();\n}).catch(() => {\n  context.grafana.notifyError(['ミッション要求', `応答を読めませんでした (${response.status})`]);\n});"
+        },
+        "submit": {
+          "text": "要求を出す",
+          "icon": "rocket",
+          "variant": "primary",
+          "foregroundColor": "",
+          "backgroundColor": ""
+        },
+        "reset": {
+          "variant": "hidden",
+          "text": "Reset",
+          "icon": "process",
+          "foregroundColor": "",
+          "backgroundColor": ""
+        },
+        "saveDefault": {
+          "variant": "hidden",
+          "text": "Save Default",
+          "icon": "save",
+          "foregroundColor": "",
+          "backgroundColor": ""
+        },
+        "buttonGroup": {
+          "orientation": "left",
+          "size": "md"
+        },
+        "elements": [
+          {
+            "uid": "requester",
+            "id": "requester",
+            "title": "要求する人",
+            "type": "string",
+            "value": "",
+            "labelWidth": 14,
+            "tooltip": "入れると「要求を出す」が押せる",
+            "section": "",
+            "hidden": false,
+            "unit": "",
+            "width": 30
+          },
+          {
+            "uid": "color",
+            "id": "color",
+            "title": "ランプの色",
+            "type": "select",
+            "value": "CYAN",
+            "labelWidth": 14,
+            "tooltip": "",
+            "section": "",
+            "hidden": false,
+            "unit": "",
+            "width": 30,
+            "options": [
+              {
+                "value": "RED",
+                "label": "RED",
+                "id": "RED"
+              },
+              {
+                "value": "GREEN",
+                "label": "GREEN",
+                "id": "GREEN"
+              },
+              {
+                "value": "BLUE",
+                "label": "BLUE",
+                "id": "BLUE"
+              },
+              {
+                "value": "YELLOW",
+                "label": "YELLOW",
+                "id": "YELLOW"
+              },
+              {
+                "value": "CYAN",
+                "label": "CYAN",
+                "id": "CYAN"
+              },
+              {
+                "value": "MAGENTA",
+                "label": "MAGENTA",
+                "id": "MAGENTA"
+              },
+              {
+                "value": "WHITE",
+                "label": "WHITE",
+                "id": "WHITE"
+              }
+            ],
+            "optionsSource": "Custom",
+            "allowCustomValue": false
+          },
+          {
+            "uid": "duration",
+            "id": "duration",
+            "title": "点灯時間 (秒)",
+            "type": "number",
+            "value": 60,
+            "labelWidth": 14,
+            "tooltip": "",
+            "section": "",
+            "hidden": false,
+            "unit": "",
+            "width": 30,
+            "min": 1,
+            "max": 600
+          }
+        ]
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "mission"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "mission"
+          },
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "http://localhost:8095/health",
+          "url_options": {
+            "method": "GET"
+          },
+          "root_selector": "",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "要求の一覧と状態",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "mission"
+      },
+      "description": "ミッション要求サービスの GET /requests。状態は YAMCS のコマンドの履歴から作る (承認待ち → 送信済み → 実行完了)",
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "mission"
+          },
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "http://localhost:8095/requests",
+          "url_options": {
+            "method": "GET"
+          },
+          "root_selector": "",
+          "columns": [
+            {
+              "selector": "id",
+              "text": "番号",
+              "type": "number"
+            },
+            {
+              "selector": "time",
+              "text": "受け付けた時刻",
+              "type": "timestamp"
+            },
+            {
+              "selector": "requester",
+              "text": "要求する人",
+              "type": "string"
+            },
+            {
+              "selector": "color",
+              "text": "色",
+              "type": "string"
+            },
+            {
+              "selector": "duration",
+              "text": "時間 (秒)",
+              "type": "number"
+            },
+            {
+              "selector": "status",
+              "text": "状態",
+              "type": "string"
+            },
+            {
+              "selector": "message",
+              "text": "説明",
+              "type": "string"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "状態"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "承認待ち": {
+                        "color": "#FADE2A",
+                        "index": 0
+                      },
+                      "承認済み": {
+                        "color": "#8AB8FF",
+                        "index": 1
+                      },
+                      "送信済み": {
+                        "color": "#5794F2",
+                        "index": 2
+                      },
+                      "実行完了": {
+                        "color": "#73BF69",
+                        "index": 3
+                      },
+                      "却下": {
+                        "color": "#8E8E8E",
+                        "index": 4
+                      },
+                      "失敗": {
+                        "color": "#F2495C",
+                        "index": 5
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "色"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "OFF": {
+                        "color": "#8E8E8E",
+                        "index": 0
+                      },
+                      "RED": {
+                        "color": "#F2495C",
+                        "index": 1
+                      },
+                      "GREEN": {
+                        "color": "#73BF69",
+                        "index": 2
+                      },
+                      "BLUE": {
+                        "color": "#5794F2",
+                        "index": 3
+                      },
+                      "YELLOW": {
+                        "color": "#FADE2A",
+                        "index": 4
+                      },
+                      "CYAN": {
+                        "color": "#8AB8FF",
+                        "index": 5
+                      },
+                      "MAGENTA": {
+                        "color": "#B877D9",
+                        "index": 6
+                      },
+                      "WHITE": {
+                        "color": "#FFFFFF",
+                        "index": 7
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "説明"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 320
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "番号",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "番号": 0,
+              "受け付けた時刻": 1,
+              "要求する人": 2,
+              "色": 3,
+              "時間 (秒)": 4,
+              "状態": 5,
+              "説明": 6
+            },
+            "excludeByName": {},
+            "renameByName": {}
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "state-timeline",
+      "title": "衛星のランプ (テレメトリ)",
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "HK の LampColor。地上はランプを直接見られないので、テレメトリで確かめる",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "queryType": "ParameterRanges",
+          "parameter": "/M5Sat/Bus/LampColor"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "queryType": "ParameterRanges",
+          "parameter": "/M5Sat/Bus/Mode"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "OFF": {
+                  "color": "#8E8E8E",
+                  "index": 0
+                },
+                "RED": {
+                  "color": "#F2495C",
+                  "index": 1
+                },
+                "GREEN": {
+                  "color": "#73BF69",
+                  "index": 2
+                },
+                "BLUE": {
+                  "color": "#5794F2",
+                  "index": 3
+                },
+                "YELLOW": {
+                  "color": "#FADE2A",
+                  "index": 4
+                },
+                "CYAN": {
+                  "color": "#8AB8FF",
+                  "index": 5
+                },
+                "MAGENTA": {
+                  "color": "#B877D9",
+                  "index": 6
+                },
+                "WHITE": {
+                  "color": "#FFFFFF",
+                  "index": 7
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "SAFE": {
+                  "color": "#F2CC0C",
+                  "index": 10
+                },
+                "NOMINAL": {
+                  "color": "#73BF69",
+                  "index": 11
+                },
+                "MISSION": {
+                  "color": "#5794F2",
+                  "index": 12
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8E8E8E",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ランプ"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "運用モード"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "alignValue": "center",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "ランプとコマンドに関わるイベント",
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "queryType": "ListEvents",
+          "type": "LAMP_ON"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "queryType": "ListEvents",
+          "type": "LAMP_OFF"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "queryType": "ListEvents",
+          "type": "COMMAND_REJECTED"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "time",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "message"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 600
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": []
+  }
+}

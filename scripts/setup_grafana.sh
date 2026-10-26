@@ -56,4 +56,40 @@ else
   echo "grafana: プラグインを $plugin_dir に入れました"
 fi
 
+# Grafana の公式のプラグイン一覧から入れる (grafana.com の API で、この Mac 向けの配布ファイルと sha256 を調べる)
+install_catalog_plugin() {
+  local id=${1%@*} version=${1#*@}
+  local installed="$GRAFANA_DIR/data/plugins/$id"
+  if [[ -f "$installed/plugin.json" ]] && grep -q "\"version\": \"$version\"" "$installed/plugin.json"; then
+    echo "grafana: プラグイン $id $version は入れてあります"
+    return 0
+  fi
+  local info
+  info="$(curl -fsL "https://grafana.com/api/plugins/$id/versions/$version" | "$(find_python)" -c '
+import json, sys
+packages = json.load(sys.stdin).get("packages") or {}
+package = packages.get(sys.argv[1]) or packages.get("any")
+print(package["downloadUrl"], package["sha256"])' "darwin-$arch")"
+  local url="https://grafana.com${info% *}" expected="${info#* }"
+  local tmp
+  tmp="$(mktemp -d)"
+  echo "grafana: downloading $id $version"
+  curl -fL --progress-bar -o "$tmp/plugin.zip" "$url"
+  local actual
+  actual="$(shasum -a 256 "$tmp/plugin.zip" | cut -d' ' -f1)"
+  if [[ "$expected" != "$actual" ]]; then
+    echo "grafana: $id のチェックサムが合いません (expected $expected, got $actual)" >&2
+    rm -rf "$tmp"
+    exit 1
+  fi
+  rm -rf "$installed"
+  unzip -q "$tmp/plugin.zip" -d "$GRAFANA_DIR/data/plugins"
+  rm -rf "$tmp"
+  echo "grafana: プラグイン $id $version を入れました"
+}
+
+for plugin in "${GRAFANA_CATALOG_PLUGINS[@]}"; do
+  install_catalog_plugin "$plugin"
+done
+
 echo "準備ができました。scripts/start.sh で YAMCS といっしょに起動します ($GRAFANA_URL)"

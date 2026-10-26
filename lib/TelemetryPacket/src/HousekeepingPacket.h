@@ -30,10 +30,12 @@
 //     45    4  uint32  last observation start (Unix秒。実際に始めた時刻。見送り・開始前の取り消しは予約の時刻)
 //     49    2  uint16  last observation length (秒。実際に観測した長さ)
 //     51    2  uint16  completed observation count
+//     53    1  uint8   lamp color (LampColor。OFF=消えている)
+//     54    2  uint16  lamp remaining (秒。消えていれば0)
 namespace HousekeepingPacket {
 
 const uint16_t kApid = 101;
-const size_t kPacketSize = 53;
+const size_t kPacketSize = 56;
 
 enum class OperationMode : uint8_t { Safe = 0, Nominal = 1, Mission = 2 };
 
@@ -52,6 +54,9 @@ enum class ObservationResult : uint8_t {
   SkippedNotNominal = 4,  // 開始の時刻に NOMINAL でなく、見送った
   Cancelled = 5,          // CANCEL_OBSERVATION で取り消した
 };
+
+// ミッション要求で点けるランプの色 (SET_LAMP)
+enum class LampColor : uint8_t { Off = 0, Red = 1, Green = 2, Blue = 3, Yellow = 4, Cyan = 5, Magenta = 6, White = 7 };
 
 struct Housekeeping {
   OperationMode mode = OperationMode::Nominal;
@@ -76,6 +81,8 @@ struct Housekeeping {
   uint32_t lastObservationStart = 0;
   uint16_t lastObservationLength = 0;
   uint16_t completedObservations = 0;
+  LampColor lampColor = LampColor::Off;
+  uint16_t lampRemaining = 0;
 };
 
 // パケットをbufferに書き込み、書き込んだバイト数を返す。bufferが小さければ0を返す。

@@ -77,6 +77,11 @@ void TelemetryDisplay::setSatelliteStatus(Satellite::OperationMode mode, bool pa
   payloadPower_ = payloadPower;
 }
 
+void TelemetryDisplay::setLamp(Satellite::LampColor color, uint16_t remainingSec) {
+  lampColor_ = color;
+  lampRemainingSec_ = remainingSec;
+}
+
 void TelemetryDisplay::setLinkStatus(const char* text, bool ok) {
   snprintf(linkStatus_, sizeof(linkStatus_), "%s", text);
   linkOk_ = ok;
@@ -98,8 +103,35 @@ void TelemetryDisplay::draw(const NmeaParser& parser, bool receiving) {
     drawTelemetryPage(parser);
     drawButtonLabels();
   }
+  drawLamp();
 
   canvas_.pushSprite(0, 0);
+}
+
+void TelemetryDisplay::drawLamp() {
+  if (lampColor_ == Satellite::LampColor::Off) return;
+  uint16_t color;
+  switch (lampColor_) {
+    case Satellite::LampColor::Red: color = TFT_RED; break;
+    case Satellite::LampColor::Green: color = TFT_GREEN; break;
+    case Satellite::LampColor::Blue: color = TFT_BLUE; break;
+    case Satellite::LampColor::Yellow: color = TFT_YELLOW; break;
+    case Satellite::LampColor::Cyan: color = TFT_CYAN; break;
+    case Satellite::LampColor::Magenta: color = TFT_MAGENTA; break;
+    default: color = TFT_WHITE; break;
+  }
+  // ページの内容の上に重ねるので、縁取りをして目立たせる
+  const int r = 30;
+  const int cx = kWidth - r - 10;
+  const int cy = kHeight - r - 34;
+  canvas_.fillCircle(cx, cy, r + 3, TFT_WHITE);
+  canvas_.fillCircle(cx, cy, r, color);
+  char text[8];
+  snprintf(text, sizeof(text), "%us", lampRemainingSec_);
+  canvas_.setFont(&fonts::Font2);
+  canvas_.setTextColor(TFT_BLACK);
+  canvas_.setTextDatum(middle_center);
+  canvas_.drawString(text, cx, cy);
 }
 
 void TelemetryDisplay::drawTelemetryPage(const NmeaParser& parser) {

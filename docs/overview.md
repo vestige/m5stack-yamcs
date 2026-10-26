@@ -126,6 +126,8 @@ Mac の `tools/udp_receiver.py` は、地上局の中で、電波と管制局の
 
 管制局の外では、**Grafana**（http://localhost:3000）で、YAMCS に残ったテレメトリの長い期間の傾向を見られます。Grafana は見るだけで、運用は YAMCS で行います（`grafana/`、README の「Grafana」）。
 
+ペイロードの利用者は、Grafana のフォーム（利用者向けの画面）から **ミッション要求**（ランプの色と時間）を出せます。**ミッション要求サービス**（`tools/mission_api.py`）が要求を検査してコマンドにし、運用者が YAMCS の Queues で承認してから衛星へ送ります（README の「ミッション要求」）。
+
 YAMCS と中継プログラムは `scripts/start.sh` でまとめて起動し、`scripts/stop.sh` で止めます。
 
 ## 3. データの流れ
@@ -178,7 +180,7 @@ sequenceDiagram
 | 102 | 衛星 → 地上 | ACK（コマンドへの応答） | コマンドを受けたとき |
 | 103 | 衛星 → 地上 | イベント（起きた出来事） | 何か起きたとき |
 | 104 | 衛星 → 地上 | 観測データ（衛星ごとの信号の強さ）。ミッションの成果物 | MISSION モードのとき、1秒ごと |
-| 110 | 地上 → 衛星 | コマンド | 運用者が送ったとき |
+| 110 | 地上 → 衛星 | コマンド（`SET_LAMP` などのミッション要求から作ったものも含む） | 運用者が送ったとき、運用者がミッション要求を承認したとき |
 | 111 | 地上 → 衛星 | 訓練用の異常（YAMCS を通らない） | 訓練の出題者が `tools/inject_fault.py` で送ったとき |
 
 ## 4. 運用モード
@@ -226,6 +228,7 @@ stateDiagram-v2
 | パケットとコマンドの定義（MDB） | `yamcs/src/main/yamcs/mdb/m5sat.xml` |
 | 運用画面・手順書 | `yamcs/src/main/yamcs/displays/`、`yamcs/src/main/yamcs/stacks/` |
 | 運用の道具 | `tools/send_command.py`（コマンド）、`tools/plan_passes.py`（パスの計画） |
+| ミッション要求 | `tools/mission_api.py`（要求を受けてコマンドにするサービス）、`grafana/dashboards/m5sat-mission.json`（要求のフォーム） |
 | 訓練の道具 | `tools/inject_fault.py`（出題）、`tools/training_report.py`（振り返り）、`lib/Satellite/src/TrainingFault.h`（衛星側） |
 | 傾向を見るダッシュボード（Grafana） | `grafana/`（設定・データソース・ダッシュボード）、`scripts/setup_grafana.sh`（準備） |
 | 起動・停止 | `scripts/start.sh`、`scripts/stop.sh`、`scripts/status.sh` |

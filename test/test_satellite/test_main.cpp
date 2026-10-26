@@ -652,6 +652,91 @@ void test_last_observation_aborted_and_cancelled() {
   TEST_ASSERT_EQUAL_UINT16(0, hk.completedObservations);
 }
 
+// --- ミッション要求のランプ ---
+
+std::vector<uint8_t> lampArgs(Satellite::LampColor color, uint16_t duration) {
+  return {static_cast<uint8_t>(color), static_cast<uint8_t>(duration >> 8), static_cast<uint8_t>(duration)};
+}
+
+void test_lamp_on_and_expire() {
+  Satellite sat;
+  sat.updateLamp(1000);
+  drainEvents(sat);
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Cyan, 60)).accepted);
+  TEST_ASSERT_TRUE(sat.lampColor() == Satellite::LampColor::Cyan);
+  TEST_ASSERT_EQUAL_UINT16(60, sat.lampRemainingSec(1000));
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events[0].id == EventId::LampOn);
+  TEST_ASSERT_EQUAL_UINT16(5, events[0].arg1);  // CYAN
+  TEST_ASSERT_EQUAL_UINT16(60, events[0].arg2);
+
+  sat.updateLamp(1000 + 59500);
+  TEST_ASSERT_EQUAL_UINT16(1, sat.lampRemainingSec(1000 + 59500));  // 残りは切り上げ
+  sat.updateLamp(1000 + 60000);  // 時間が来た
+  TEST_ASSERT_TRUE(sat.lampColor() == Satellite::LampColor::Off);
+  TEST_ASSERT_EQUAL_UINT16(0, sat.lampRemainingSec(1000 + 60000));
+  events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events[0].id == EventId::LampOff);
+  TEST_ASSERT_EQUAL_UINT16(Satellite::kLampOffExpired, events[0].arg2);
+
+  HousekeepingPacket::Housekeeping hk;
+  sat.fillHousekeeping(&hk);
+  TEST_ASSERT_TRUE(hk.lampColor == Satellite::LampColor::Off);
+}
+
+void test_lamp_argument_checks() {
+  Satellite sat;
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Red, 0)).error ==
+                   ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Red, 601)).error ==
+                   ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, {8, 0, 10}).error == ErrorCode::InvalidArgument);  // 知らない色
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, {1, 0}).error == ErrorCode::InvalidLength);
+  // 消すのは時間を問わない
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Off, 0)).accepted);
+}
+
+void test_lamp_needs_payload_power() {
+  Satellite sat;
+  send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Yellow, 300));
+  drainEvents(sat);
+  // ペイロードの電源を切るとランプも消え、電源が切れている間は点けられない
+  send(sat, CommandId::PayloadPower, {0});
+  TEST_ASSERT_TRUE(sat.lampColor() == Satellite::LampColor::Off);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  bool found = false;
+  for (const auto& e : events) {
+    if (e.id == EventId::LampOff) {
+      found = true;
+      TEST_ASSERT_EQUAL_UINT16(Satellite::kLampOffPayloadOff, e.arg2);
+    }
+  }
+  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Yellow, 300)).error ==
+                   ErrorCode::NotAllowed);
+  send(sat, CommandId::PayloadPower, {1});
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Yellow, 300)).accepted);
+}
+
+void test_lamp_off_by_command_and_safe() {
+  Satellite sat;
+  send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Green, 300));
+  drainEvents(sat);
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Off, 0)).accepted);
+  TEST_ASSERT_TRUE(sat.lampColor() == Satellite::LampColor::Off);
+  std::vector<EventPacket::Event> events = drainEvents(sat);
+  TEST_ASSERT_TRUE(events[0].id == EventId::LampOff);
+  TEST_ASSERT_EQUAL_UINT16(2, events[0].arg1);  // 消す前は GREEN
+  TEST_ASSERT_EQUAL_UINT16(Satellite::kLampOffByCommand, events[0].arg2);
+
+  // SAFE になったら消え、SAFE の間は点けられない
+  send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Blue, 300));
+  send(sat, CommandId::SetMode, {0});
+  TEST_ASSERT_TRUE(sat.lampColor() == Satellite::LampColor::Off);
+  TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Blue, 300)).error ==
+                   ErrorCode::NotAllowed);
+}
+
 void test_observation_packet() {
   SatelliteInfo sats[3];
   sats[0].system = GnssSystem::QZSS;
@@ -744,6 +829,10 @@ int main(int, char**) {
   RUN_TEST(test_last_observation_completed);
   RUN_TEST(test_last_observation_skipped);
   RUN_TEST(test_last_observation_aborted_and_cancelled);
+  RUN_TEST(test_lamp_on_and_expire);
+  RUN_TEST(test_lamp_argument_checks);
+  RUN_TEST(test_lamp_off_by_command_and_safe);
+  RUN_TEST(test_lamp_needs_payload_power);
   RUN_TEST(test_observation_packet);
   RUN_TEST(test_observation_packet_limits_satellites);
   RUN_TEST(test_ack_packet);

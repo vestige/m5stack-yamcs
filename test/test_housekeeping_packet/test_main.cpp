@@ -19,13 +19,13 @@ void test_primary_header() {
   HousekeepingPacket::Housekeeping hk;
   uint8_t buf[HousekeepingPacket::kPacketSize];
   size_t n = HousekeepingPacket::encode(hk, 7, buf, sizeof(buf));
-  TEST_ASSERT_EQUAL(53, n);
+  TEST_ASSERT_EQUAL(56, n);
 
   // version=0, type=TM, secondary header=0, APID=101
   TEST_ASSERT_EQUAL_HEX16(0x0065, readU16(buf));
   TEST_ASSERT_EQUAL_HEX16(0xC007, readU16(buf + 2));
-  // データ部47バイト → length=46
-  TEST_ASSERT_EQUAL_UINT16(46, readU16(buf + 4));
+  // データ部50バイト → length=49
+  TEST_ASSERT_EQUAL_UINT16(49, readU16(buf + 4));
 }
 
 void test_payload() {
@@ -52,6 +52,8 @@ void test_payload() {
   hk.lastObservationStart = 1791166125;
   hk.lastObservationLength = 75;
   hk.completedObservations = 260;
+  hk.lampColor = HousekeepingPacket::LampColor::Magenta;
+  hk.lampRemaining = 590;
 
   uint8_t buf[HousekeepingPacket::kPacketSize];
   HousekeepingPacket::encode(hk, 0, buf, sizeof(buf));
@@ -78,6 +80,8 @@ void test_payload() {
   TEST_ASSERT_EQUAL_UINT32(1791166125, readU32(buf + 45));
   TEST_ASSERT_EQUAL_UINT16(75, readU16(buf + 49));
   TEST_ASSERT_EQUAL_UINT16(260, readU16(buf + 51));
+  TEST_ASSERT_EQUAL_UINT8(6, buf[53]);
+  TEST_ASSERT_EQUAL_UINT16(590, readU16(buf + 54));
 }
 
 void test_defaults() {
