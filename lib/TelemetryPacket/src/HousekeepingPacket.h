@@ -32,10 +32,11 @@
 //     51    2  uint16  completed observation count
 //     53    1  uint8   lamp color (LampColor。OFF=消えている)
 //     54    2  uint16  lamp remaining (秒。消えていれば0)
+//     56    2  uint16  payload on time (秒。ペイロードの電源を入れてからの時間。OFF なら0、65535 で頭打ち)
 namespace HousekeepingPacket {
 
 const uint16_t kApid = 101;
-const size_t kPacketSize = 56;
+const size_t kPacketSize = 58;
 
 enum class OperationMode : uint8_t { Safe = 0, Nominal = 1, Mission = 2 };
 
@@ -83,6 +84,7 @@ struct Housekeeping {
   uint16_t completedObservations = 0;
   LampColor lampColor = LampColor::Off;
   uint16_t lampRemaining = 0;
+  uint16_t payloadOnTime = 0;
 };
 
 // パケットをbufferに書き込み、書き込んだバイト数を返す。bufferが小さければ0を返す。

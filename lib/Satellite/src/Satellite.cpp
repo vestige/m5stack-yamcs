@@ -309,6 +309,12 @@ void Satellite::turnLampOff(uint16_t reason) {
   reportInfo(EventId::LampOff, static_cast<uint16_t>(previous), reason);
 }
 
+uint16_t Satellite::payloadOnSec(uint32_t nowMs) const {
+  if (!payloadPower_) return 0;
+  uint32_t sec = (nowMs - payloadOnSinceMs_) / 1000;
+  return sec > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(sec);
+}
+
 uint16_t Satellite::lampRemainingSec(uint32_t nowMs) const {
   if (lampColor_ == LampColor::Off) return 0;
   int32_t remainingMs = static_cast<int32_t>(lampUntilMs_ - nowMs);
@@ -318,6 +324,7 @@ uint16_t Satellite::lampRemainingSec(uint32_t nowMs) const {
 void Satellite::changePayloadPower(bool on) {
   if (on == payloadPower_) return;
   payloadPower_ = on;
+  if (on) payloadOnSinceMs_ = nowMs_;
   if (!on) turnLampOff(kLampOffPayloadOff);
   reportInfo(EventId::PayloadPowerChanged, on ? 1 : 0);
 }
@@ -350,6 +357,7 @@ void Satellite::fillHousekeeping(HousekeepingPacket::Housekeeping* hk) const {
   hk->completedObservations = completedObservations_;
   hk->lampColor = lampColor_;
   hk->lampRemaining = lampRemainingSec(nowMs_);
+  hk->payloadOnTime = payloadOnSec(nowMs_);
 }
 
 const char* Satellite::modeName(OperationMode mode) {

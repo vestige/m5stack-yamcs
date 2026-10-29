@@ -82,6 +82,8 @@ class Satellite {
   ObservationState observationState() const { return observationState_; }
   ObservationResult lastObservationResult() const { return lastObservationResult_; }
   LampColor lampColor() const { return lampColor_; }
+  // ペイロードの電源を入れてからの秒数 (OFF なら0)。立ち上がり中かを地上で判断するため HK で送る
+  uint16_t payloadOnSec(uint32_t nowMs) const;
   // ランプが消えるまでの秒数 (消えていれば0)
   uint16_t lampRemainingSec(uint32_t nowMs) const;
 
@@ -104,6 +106,8 @@ class Satellite {
 
   OperationMode mode_ = OperationMode::Nominal;
   bool payloadPower_ = true;
+  // ペイロードの電源を入れた時刻。起動時は電源が入っているので0 (起動した時刻)
+  uint32_t payloadOnSinceMs_ = 0;
   uint16_t tmIntervalMs_ = kDefaultTmIntervalMs;
   uint16_t acceptedCommands_ = 0;
   uint16_t rejectedCommands_ = 0;

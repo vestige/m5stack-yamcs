@@ -299,6 +299,7 @@
 				<Parameter name="CompletedObservations" parameterTypeRef="Observation_Count_Type" shortDescription="完了した観測の回数" />
 				<Parameter name="LampColor" parameterTypeRef="Lamp_Color_Type" shortDescription="ミッション要求のランプの色 (OFF=消えている)" />
 				<Parameter name="LampRemaining" parameterTypeRef="Seconds_Type" shortDescription="ランプが消えるまでの時間" />
+				<Parameter name="PayloadOnTime" parameterTypeRef="Seconds_Type" shortDescription="ペイロードの電源を入れてからの時間 (OFF なら0)。立ち上がり中かの判断に使う" />
 				<Parameter name="AckTcSequence" parameterTypeRef="Tc_Sequence_Type" shortDescription="ACK: どのTC (シーケンス番号) への応答か" />
 				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
 				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
@@ -339,6 +340,7 @@
 						<ParameterRefEntry parameterRef="CompletedObservations" />
 						<ParameterRefEntry parameterRef="LampColor" />
 						<ParameterRefEntry parameterRef="LampRemaining" />
+						<ParameterRefEntry parameterRef="PayloadOnTime" />
 					</EntryList>
 					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
 						<RestrictionCriteria>
@@ -899,12 +901,20 @@ switch (severity.value) {
 				</FloatParameterType>
 				<IntegerParameterType name="Satellites_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="8" />
-					<!-- 衛星が4機未満では3D測位できないので警告する -->
-					<DefaultAlarm>
-						<StaticAlarmRanges>
-							<WarningRange minInclusive="4" />
-						</StaticAlarmRanges>
-					</DefaultAlarm>
+					<!--
+					  衛星が4機未満では3D測位できないので警告する。
+					  ただし、ペイロードの電源を入れてから30秒 (立ち上がり中) は、つかめていないのが当たり前なので警告しない (#50)
+					-->
+					<ContextAlarmList>
+						<ContextAlarm>
+							<StaticAlarmRanges>
+								<WarningRange minInclusive="4" />
+							</StaticAlarmRanges>
+							<ContextMatch>
+								<Comparison parameterRef="/M5Sat/Bus/PayloadOnTime" comparisonOperator="&gt;=" value="30" />
+							</ContextMatch>
+						</ContextAlarm>
+					</ContextAlarmList>
 				</IntegerParameterType>
 				<EnumeratedParameterType name="Fix_Quality_Type">
 					<IntegerDataEncoding sizeInBits="8" />
@@ -927,12 +937,17 @@ switch (severity.value) {
 						<Enumeration value="2" label="2D" />
 						<Enumeration value="3" label="3D" />
 					</EnumerationList>
-					<!-- 測位できていなければ警告する -->
-					<DefaultAlarm>
-						<EnumerationAlarmList>
-							<EnumerationAlarm alarmLevel="warning" enumerationLabel="NoFix" />
-						</EnumerationAlarmList>
-					</DefaultAlarm>
+					<!-- 測位できていなければ警告する。ペイロードの立ち上がり中 (電源を入れてから30秒) は警告しない (#50) -->
+					<ContextAlarmList>
+						<ContextAlarm>
+							<EnumerationAlarmList>
+								<EnumerationAlarm alarmLevel="warning" enumerationLabel="NoFix" />
+							</EnumerationAlarmList>
+							<ContextMatch>
+								<Comparison parameterRef="/M5Sat/Bus/PayloadOnTime" comparisonOperator="&gt;=" value="30" />
+							</ContextMatch>
+						</ContextAlarm>
+					</ContextAlarmList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Reserved_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="3" />
