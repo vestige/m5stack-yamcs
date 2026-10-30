@@ -34,10 +34,13 @@
 //     61    1  uint8   lamp color (LampColor。OFF=消えている)
 //     62    2  uint16  lamp remaining (秒。消えていれば0)
 //     64    2  uint16  payload on time (秒。ペイロードの電源を入れてからの時間。OFF なら0、65535 で頭打ち)
+//     66    1  uint8   recorder state (0=NO_CARD, 1=RECORDING, 2=WAITING_TIME, 3=ERROR)
+//     67    2  uint16  recorder free (MB。microSD の空き)
+//     69    4  uint32  recorder records (起動してから記録したパケットの数)
 namespace HousekeepingPacket {
 
 const uint16_t kApid = 101;
-const size_t kPacketSize = 66;
+const size_t kPacketSize = 73;
 
 enum class OperationMode : uint8_t { Safe = 0, Nominal = 1, Mission = 2 };
 
@@ -86,6 +89,9 @@ struct Housekeeping {
   LampColor lampColor = LampColor::Off;
   uint16_t lampRemaining = 0;
   uint16_t payloadOnTime = 0;
+  uint8_t recorderState = 0;
+  uint16_t recorderFreeMB = 0;
+  uint32_t recorderRecords = 0;
 };
 
 // パケットをbufferに書き込み、書き込んだバイト数を返す。bufferが小さければ0を返す。

@@ -27,3 +27,6 @@ logs/
 # Grafana (scripts/setup_grafana.sh で展開した配布ファイルと、Grafana の保存データ)
 grafana/dist/
 grafana/data/
+
+# Python
+__pycache__/
