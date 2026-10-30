@@ -4,11 +4,11 @@
 
 namespace EventPacket {
 
-size_t encode(const Event& event, uint16_t sequenceCount, uint8_t* buffer, size_t size) {
+size_t encode(const Event& event, uint16_t sequenceCount, uint64_t timeMs, uint8_t* buffer, size_t size) {
   if (size < kPacketSize) return 0;
 
   PacketWriter w(buffer);
-  w.primaryHeader(kApid, sequenceCount, kPacketSize);
+  w.header(kApid, sequenceCount, kPacketSize, timeMs);
   w.u8(static_cast<uint8_t>(event.severity));
   w.u8(static_cast<uint8_t>(event.id));
   w.u16(event.arg1);

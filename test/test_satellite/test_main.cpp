@@ -15,6 +15,9 @@ using OperationMode = Satellite::OperationMode;
 
 namespace {
 
+// パケットの副ヘッダの機上時刻。バイトの並びがわかりやすい値にしておく
+const uint64_t kPacketTimeMs = 0x0102030405060708ULL;
+
 // YAMCSが作るのと同じ形のTCパケットを組み立てる
 std::vector<uint8_t> tcPacket(uint8_t commandId, std::vector<uint8_t> args, uint16_t seq = 0,
                               uint16_t apid = Telecommand::kApid) {
@@ -301,8 +304,9 @@ void test_event_packet() {
   e.arg1 = 3;
   e.arg2 = 0x0102;
   uint8_t buf[EventPacket::kPacketSize];
-  TEST_ASSERT_EQUAL(12, EventPacket::encode(e, 5, buf, sizeof(buf)));
-  const uint8_t expected[] = {0x00, 0x67, 0xC0, 0x05, 0x00, 0x05, 0x02, 0x06, 0x00, 0x03, 0x01, 0x02};
+  TEST_ASSERT_EQUAL(20, EventPacket::encode(e, 5, kPacketTimeMs, buf, sizeof(buf)));
+  const uint8_t expected[] = {0x08, 0x67, 0xC0, 0x05, 0x00, 0x0D, 0x01, 0x02, 0x03, 0x04,
+                              0x05, 0x06, 0x07, 0x08, 0x02, 0x06, 0x00, 0x03, 0x01, 0x02};
   TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, buf, sizeof(expected));
 }
 
@@ -470,6 +474,14 @@ void advance(Satellite& sat, uint32_t nowMs) {
 }
 
 }  // namespace
+
+void test_onboard_clock_millis() {
+  OnboardClock clock;
+  TEST_ASSERT_TRUE(clock.nowMillis(5000) == 0);  // 合わせる前は0
+  clock.sync(kUtc, 2000);
+  TEST_ASSERT_TRUE(clock.nowMillis(2000) == static_cast<uint64_t>(kUtc) * 1000);
+  TEST_ASSERT_TRUE(clock.nowMillis(2345) == static_cast<uint64_t>(kUtc) * 1000 + 345);
+}
 
 void test_onboard_clock() {
   OnboardClock clock;
@@ -771,34 +783,35 @@ void test_observation_packet() {
   sats[2].prn = 7;  // 仰角・方位角は不明、信号なし
 
   uint8_t buf[ObservationPacket::kMaxPacketSize];
-  size_t n = ObservationPacket::encode(kUtc, sats, 3, 4, buf, sizeof(buf));
-  TEST_ASSERT_EQUAL(19 + 18, n);
+  size_t n = ObservationPacket::encode(kUtc, sats, 3, 4, kPacketTimeMs, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL(27 + 18, n);
   TEST_ASSERT_EQUAL_HEX8(0x68, buf[1]);  // APID 104
-  TEST_ASSERT_EQUAL_UINT8(3, buf[10]);   // 見えている数
-  TEST_ASSERT_EQUAL_UINT8(2, buf[11]);   // 捕捉している数
-  TEST_ASSERT_EQUAL_UINT8(45, buf[12]);  // 最大
-  TEST_ASSERT_EQUAL_UINT8(41, buf[13]);  // 平均 (45+36)/2=40.5 → 41
+  TEST_ASSERT_EQUAL_UINT8(3, buf[18]);   // 見えている数
+  TEST_ASSERT_EQUAL_UINT8(2, buf[19]);   // 捕捉している数
+  TEST_ASSERT_EQUAL_UINT8(45, buf[20]);  // 最大
+  TEST_ASSERT_EQUAL_UINT8(41, buf[21]);  // 平均 (45+36)/2=40.5 → 41
   const uint8_t perSystem[] = {1, 0, 0, 0, 1};
-  TEST_ASSERT_EQUAL_HEX8_ARRAY(perSystem, buf + 14, 5);
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(perSystem, buf + 22, 5);
   const uint8_t last[] = {0, 7, 0xFF, 0xFF, 0xFF, 0};  // GPS, PRN7, 仰角-1, 方位角不明, C/N0 0
-  TEST_ASSERT_EQUAL_HEX8_ARRAY(last, buf + 19 + 12, 6);
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(last, buf + 27 + 12, 6);
 }
 
 void test_observation_packet_limits_satellites() {
   SatelliteInfo sats[40];
   uint8_t buf[ObservationPacket::kMaxPacketSize];
-  TEST_ASSERT_EQUAL(ObservationPacket::kMaxPacketSize, ObservationPacket::encode(kUtc, sats, 40, 0, buf, sizeof(buf)));
-  TEST_ASSERT_EQUAL_UINT8(32, buf[10]);
-  TEST_ASSERT_EQUAL(0, ObservationPacket::encode(kUtc, sats, 40, 0, buf, sizeof(buf) - 1));
+  TEST_ASSERT_EQUAL(ObservationPacket::kMaxPacketSize, ObservationPacket::encode(kUtc, sats, 40, 0, kPacketTimeMs, buf, sizeof(buf)));
+  TEST_ASSERT_EQUAL_UINT8(32, buf[18]);
+  TEST_ASSERT_EQUAL(0, ObservationPacket::encode(kUtc, sats, 40, 0, kPacketTimeMs, buf, sizeof(buf) - 1));
 }
 
 // --- ACKパケット ---
 
 void test_ack_packet() {
   uint8_t buf[AckPacket::kPacketSize];
-  size_t n = AckPacket::encode(0x1234, 6, AckPacket::Stage::Rejected, 3, 9, buf, sizeof(buf));
-  TEST_ASSERT_EQUAL(11, n);
-  const uint8_t expected[] = {0x00, 0x66, 0xC0, 0x09, 0x00, 0x04, 0x12, 0x34, 0x06, 0x02, 0x03};
+  size_t n = AckPacket::encode(0x1234, 6, AckPacket::Stage::Rejected, 3, 9, kPacketTimeMs, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL(19, n);
+  const uint8_t expected[] = {0x08, 0x66, 0xC0, 0x09, 0x00, 0x0C, 0x01, 0x02, 0x03, 0x04,
+                              0x05, 0x06, 0x07, 0x08, 0x12, 0x34, 0x06, 0x02, 0x03};
   TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, buf, sizeof(expected));
 }
 
@@ -837,6 +850,7 @@ int main(int, char**) {
   RUN_TEST(test_set_fdir_argument_range);
   RUN_TEST(test_fill_housekeeping_fdir);
   RUN_TEST(test_onboard_clock);
+  RUN_TEST(test_onboard_clock_millis);
   RUN_TEST(test_schedule_requires_onboard_time);
   RUN_TEST(test_schedule_argument_checks);
   RUN_TEST(test_observation_runs_on_schedule);

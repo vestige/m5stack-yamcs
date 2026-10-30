@@ -12,6 +12,8 @@ class GroundLink {
  public:
   // どの回線を使うかは起動時に決まるので、begin() で渡す
   void begin(PacketTransport& transport);
+  // パケットに入れる機上時刻 (Unix 時刻のミリ秒。わからなければ0) を返す関数
+  void setTimeSource(uint64_t (*timeMs)()) { timeMs_ = timeMs; }
   bool connected() const { return transport_ && transport_->ready(); }
   int8_t rssi() const { return transport_ ? transport_->rssi() : 0; }
   uint32_t packetsSent() const { return packetsSent_; }
@@ -29,7 +31,10 @@ class GroundLink {
  private:
   void send(const uint8_t* packet, size_t size, uint16_t& sequence);
 
+  uint64_t now() const { return timeMs_ ? timeMs_() : 0; }
+
   PacketTransport* transport_ = nullptr;
+  uint64_t (*timeMs_)() = nullptr;
   uint32_t packetsSent_ = 0;
 
   uint16_t gnssSequence_ = 0;

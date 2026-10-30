@@ -17,6 +17,10 @@ class OnboardClock {
 
   // 今の時刻 (Unix秒)。まだ一度も合わせていなければ0
   uint32_t now(uint32_t nowMs) const { return valid_ ? utcAtSync_ + (nowMs - msAtSync_) / 1000 : 0; }
+  // 今の時刻 (Unix 時刻のミリ秒)。テレメトリのパケットの時刻に使う。まだ一度も合わせていなければ0
+  uint64_t nowMillis(uint32_t nowMs) const {
+    return valid_ ? static_cast<uint64_t>(utcAtSync_) * 1000 + (nowMs - msAtSync_) : 0;
+  }
 
  private:
   bool valid_ = false;

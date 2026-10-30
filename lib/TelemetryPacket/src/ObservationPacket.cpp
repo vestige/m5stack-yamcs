@@ -12,7 +12,7 @@ const GnssSystem kSummarySystems[] = {GnssSystem::GPS, GnssSystem::GLONASS, Gnss
 
 }  // namespace
 
-size_t encode(uint32_t utcTime, const SatelliteInfo* satellites, size_t count, uint16_t sequenceCount,
+size_t encode(uint32_t utcTime, const SatelliteInfo* satellites, size_t count, uint16_t sequenceCount, uint64_t timeMs,
               uint8_t* buffer, size_t size) {
   if (count > kMaxSatellites) count = kMaxSatellites;
   size_t packetSize = kHeaderSize + kEntrySize * count;
@@ -34,7 +34,7 @@ size_t encode(uint32_t utcTime, const SatelliteInfo* satellites, size_t count, u
   }
 
   PacketWriter w(buffer);
-  w.primaryHeader(kApid, sequenceCount, packetSize);
+  w.header(kApid, sequenceCount, packetSize, timeMs);
   w.u32(utcTime);
   w.u8(static_cast<uint8_t>(count));
   w.u8(tracked);

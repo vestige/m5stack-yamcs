@@ -4,11 +4,11 @@
 
 namespace HousekeepingPacket {
 
-size_t encode(const Housekeeping& hk, uint16_t sequenceCount, uint8_t* buffer, size_t size) {
+size_t encode(const Housekeeping& hk, uint16_t sequenceCount, uint64_t timeMs, uint8_t* buffer, size_t size) {
   if (size < kPacketSize) return 0;
 
   PacketWriter w(buffer);
-  w.primaryHeader(kApid, sequenceCount, kPacketSize);
+  w.header(kApid, sequenceCount, kPacketSize, timeMs);
 
   w.u8(static_cast<uint8_t>(hk.mode));
   w.u8(hk.payloadPower ? 1 : 0);
