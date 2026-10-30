@@ -56,12 +56,14 @@ PayloadLed payloadLed(PAYLOAD_LED_PIN);
 IntervalTimer telemetryTimer;
 IntervalTimer displayTimer;
 
+// HK を先に送る。地上は、GNSS の値をアラームで判定するときに HK の値 (ペイロードを入れてからの秒数) を使うので、
+// 先に届いていないと、古い値 (再起動の前の値など) で判定してしまう
 void sendTelemetry() {
+  groundLink.sendHousekeeping(bus.collect(satellite, groundLink));
   if (satellite.payloadPower()) groundLink.sendGnss(gnss.parser());
   if (satellite.payloadPower() && satellite.mode() == Satellite::OperationMode::Mission) {
     groundLink.sendObservation(satellite.clock().now(millis()), gnss.parser());
   }
-  groundLink.sendHousekeeping(bus.collect(satellite, groundLink));
 }
 
 // 地上局とつながるまでのイベントは衛星に溜めておく
