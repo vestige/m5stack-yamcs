@@ -696,6 +696,24 @@ void test_lamp_argument_checks() {
   TEST_ASSERT_TRUE(send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Off, 0)).accepted);
 }
 
+void test_payload_on_time() {
+  Satellite sat;
+  sat.updateLamp(5000);  // 起動から5秒 (ペイロードは起動時から ON)
+  TEST_ASSERT_EQUAL_UINT16(5, sat.payloadOnSec(5000));
+  send(sat, CommandId::PayloadPower, {0});
+  TEST_ASSERT_EQUAL_UINT16(0, sat.payloadOnSec(9000));
+  sat.updateLamp(10000);
+  send(sat, CommandId::PayloadPower, {1});  // 10秒に入れ直す
+  TEST_ASSERT_EQUAL_UINT16(0, sat.payloadOnSec(10000));
+  TEST_ASSERT_EQUAL_UINT16(29, sat.payloadOnSec(39999));
+  TEST_ASSERT_EQUAL_UINT16(30, sat.payloadOnSec(40000));
+  TEST_ASSERT_EQUAL_UINT16(0xFFFF, sat.payloadOnSec(10000 + 70000000));  // 頭打ち
+  HousekeepingPacket::Housekeeping hk;
+  sat.updateLamp(25000);
+  sat.fillHousekeeping(&hk);
+  TEST_ASSERT_EQUAL_UINT16(15, hk.payloadOnTime);
+}
+
 void test_lamp_needs_payload_power() {
   Satellite sat;
   send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Yellow, 300));
@@ -833,6 +851,7 @@ int main(int, char**) {
   RUN_TEST(test_lamp_argument_checks);
   RUN_TEST(test_lamp_off_by_command_and_safe);
   RUN_TEST(test_lamp_needs_payload_power);
+  RUN_TEST(test_payload_on_time);
   RUN_TEST(test_observation_packet);
   RUN_TEST(test_observation_packet_limits_satellites);
   RUN_TEST(test_ack_packet);

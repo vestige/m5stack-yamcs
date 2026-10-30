@@ -43,8 +43,9 @@ APID_TRAINING = 111  # 訓練用の異常 (tools/inject_fault.py)。YAMCS を通
 GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
 # mode, payloadPower, accepted, rejected, lastCommand, rssi, freeHeap, minFreeHeap, uptime, bootCount, resetReason,
 # fdirEnabled, lastFault, faultCount, onboardTime, observationState, observationStart, observationDuration,
-# lastObservationResult, lastObservationStart, lastObservationLength, completedObservations, lampColor, lampRemaining
-HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHHBH")
+# lastObservationResult, lastObservationStart, lastObservationLength, completedObservations, lampColor, lampRemaining,
+# payloadOnTime
+HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHHBHH")
 # tcSequence, commandId, stage, errorCode
 ACK_PAYLOAD = struct.Struct(">HBBB")
 # severity, eventId, arg1, arg2
@@ -171,9 +172,9 @@ def format_housekeeping(data):
     (mode, payload, accepted, rejected, last_command, rssi, free_heap, min_free_heap, uptime, boot_count,
      reset_reason, fdir, last_fault, fault_count, onboard_time, obs_state, obs_start,
      obs_duration, last_result, last_start, last_length, completed, lamp_color,
-     lamp_remaining) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
+     lamp_remaining, payload_on_time) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
     return (
-        f"HK   mode={MODE.get(mode, mode)} payload={'ON' if payload else 'OFF'} "
+        f"HK   mode={MODE.get(mode, mode)} payload={'ON(' + str(payload_on_time) + 's)' if payload else 'OFF'} "
         f"cmd(ok={accepted} ng={rejected} last={COMMAND.get(last_command, 'NONE')}) rssi={rssi}dBm "
         f"heap={free_heap}(min {min_free_heap}) uptime={uptime / 1000:.1f}s "
         f"boot={boot_count} reset={RESET_REASON.get(reset_reason, reset_reason)} "
