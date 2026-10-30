@@ -601,7 +601,7 @@ HKには、観測の状態を表す項目を追加しました（HKのパケッ�
 
 | 画面 | 形式 | 中身 |
 | --- | --- | --- |
-| `m5sat-overview.opi` | OPI（CS-Studio / Yamcs Studio の画面形式） | 衛星の状態、コマンド、FDIR、観測、GNSS、位置の区画と、コマンドのボタン |
+| `m5sat-overview.opi` | OPI（CS-Studio / Yamcs Studio の画面形式） | 衛星の状態、コマンド、FDIR、観測、GNSS、位置、データレコーダの区画と、コマンドのボタン |
 | `m5sat-hk.par` | Parameter Table | HKのパラメータの表。Web UIから項目を足し引きして保存できる |
 
 画面のファイルは [yamcs/src/main/yamcs/displays/](yamcs/src/main/yamcs/displays/) に置き、5-7のスタックと同じく `yamcs.yaml` の `buckets` で `displays` バケットにしています。Parameter lists（Telemetry → Parameter lists）はYAMCSのデータベースに保存されてgitで管理できないので、同じ役目を Parameter Table（`.par`）で持たせています。
@@ -887,4 +887,54 @@ YAMCS の運用画面やアラームの一覧での見え方は今までと同�
 - TC（110）と訓練用の指示（111）は変えていない
 
 **確かめたこと**（2026-10-30、実機）：すべての TM が YAMCS で今までどおり値になる（読み取りのエラーなし）。`PacketTime`（06:24:40.549）は、YAMCS が受け取った時刻（06:24:40.505）とほぼ一致する。機上時刻は GPS の時刻で合わせているが、NMEA が届くまでの遅れや Mac の時計のずれがあるので、数十ミリ秒の違いは出る。
+
+### microSD のデータレコーダに、ペイロードごとに記録する
+
+衛星が送るテレメトリを、M5Stack の microSD にも記録するようにしました（[issue #55](https://github.com/vestige/m5stack-yamcs/issues/55)、親は [#34](https://github.com/vestige/m5stack-yamcs/issues/34)）。衛星は地上に届いたかを知らないので、パスの外（地上に届かない間）も含めて、作ったパケットをすべて記録します。あとのダンプ（[issue #56](https://github.com/vestige/m5stack-yamcs/issues/56)）で降ろすためのものです。本物の衛星の「データレコーダ」にあたります。
+
+**記録の形**（[lib/Recorder/src/RecordFormat.h](lib/Recorder/src/RecordFormat.h)）
+
+```text
+/rec/<機器>/<年月日>/<時>.bin      例: /rec/gnss/20261030/07.bin
+```
+
+| 機器（フォルダ） | 記録するパケット |
+| --- | --- |
+| `bus` | HK（101）、ACK（102）、イベント（103）：衛星バスのデータ |
+| `gnss` | GNSS（100）、観測データ（104）：ペイロード（GNSS 受信機）のデータ |
+
+- **ペイロードごとに分ける**：どの機器のデータかで置き場所を分けた。ペイロードが増えたら、機器の種類を足すだけでよい（#31 ホステッドペイロード、#47 ランプ）。ダンプのときも、機器を選んで降ろせるようにする
+- 時刻は、パケットの副ヘッダの機上時刻（#54）で決める。機上時刻がわからない間（起動直後、GPS の時刻で合わせる前）は記録しない
+- ファイルの中は、1件ずつ「長さ（uint16）+ パケットそのまま」を並べる。1時間ごとにファイルを分ける
+- 書き込みの回数を減らすため、機器ごとに貯めて5秒ごとにまとめて書く
+- 空きが 100MB より少なくなったら、いちばん古い1時間分から消す
+- microSD が無い・書き込みに失敗したときも、衛星は動き続ける。記録だけを止め、10秒ごとにつなぎ直す
+
+**HK とイベント**
+
+| 種類 | 名前 | 中身 |
+| --- | --- | --- |
+| HK（offset 66、副ヘッダを入れた今の位置） | `RecorderState` | NO_CARD / RECORDING / WAITING_TIME（機上時刻がわからない） / ERROR。NO_CARD と ERROR は警告のアラーム |
+| HK（offset 67） | `RecorderFreeMB` | microSD の空き（MB） |
+| HK（offset 69） | `RecorderRecords` | 起動してから記録したパケットの数（HK は73バイトになった） |
+| イベント | `RECORDER_STATE_CHANGED` | 状態が変わったとき（microSD を抜いた、挿し直した など） |
+
+**記録を読む**：microSD を Mac などで読み、[tools/read_recording.py](tools/read_recording.py) で、受信ログと同じ形で表示できます。
+
+```sh
+python3 tools/read_recording.py /Volumes/M5SAT/rec              # 全部
+python3 tools/read_recording.py /Volumes/M5SAT/rec --summary    # ファイルごとの件数と時間の範囲
+```
+
+`--summary` では、ファイルごとに HK の起動の回数（boot）も出ます。1つのファイルに `boot 41, 42` のように2つあれば、その1時間の途中で再起動し、前の記録の後ろに書き足したということです。
+
+**カードを抜かずに確かめる**：起動のたびに、シリアルのログにすでにある記録の量が出ます。再起動の前の記録が残り、同じファイルに書き足されていくことがわかります。中身を地上で見るのは、ダンプ（#56）で降ろしてからです（本物の衛星でも、レコーダの中身は降ろさないと見られない）。
+
+```text
+[REC] microSD: 14816MB, free 14814MB
+[REC] bus: 3 files, 457KB, latest 20261030/09.bin
+[REC] gnss: 3 files, 354KB, latest 20261030/09.bin
+```
+
+**microSD の準備**：FAT32 で、カード全体を1つの区画にしておきます（Mac なら `diskutil eraseDisk FAT32 M5SAT MBRFormat /dev/diskN`）。Raspberry Pi などで使ったカードは、小さな FAT の区画しか読めないことがあります（16GB のカードが 42MB に見えた）。
 

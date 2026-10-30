@@ -56,8 +56,11 @@ size_t GroundLink::receiveTelecommand(uint8_t* buffer, size_t capacity) {
   return transport_ ? transport_->receive(buffer, capacity) : 0;
 }
 
+// 作ったパケットは、地上に届くかどうかにかかわらず記録し、シーケンス番号も進める。
+// 衛星は地上に届いたかを知らないので (パスの外でも送る)、記録とダンプで抜けを埋める
 void GroundLink::send(const uint8_t* packet, size_t size, uint16_t& sequence) {
-  if (size == 0 || !transport_ || !transport_->send(packet, size)) return;
+  if (size == 0) return;
+  if (recorder_) recorder_->record(packet, size);
   sequence = (sequence + 1) & 0x3FFF;
-  packetsSent_++;
+  if (transport_ && transport_->send(packet, size)) packetsSent_++;
 }

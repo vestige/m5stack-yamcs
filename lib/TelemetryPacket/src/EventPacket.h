@@ -37,6 +37,7 @@ enum class EventId : uint8_t {
   ObservationCancelled = 13,  // arg1: 0=予約を取り消した, 1=観測中に取り消した
   LampOn = 14,                // arg1: 色 (LampColor), arg2: 点灯時間 (秒)
   LampOff = 15,               // arg1: 消す前の色, arg2: 0=コマンドで消した, 1=時間が来た, 2=SAFEになった, 3=ペイロードの電源が切れた
+  RecorderStateChanged = 16,  // arg1: データレコーダの状態 (0=NO_CARD, 1=RECORDING, 2=WAITING_TIME, 3=ERROR), arg2: 空き (MB)
 };
 
 struct Event {
