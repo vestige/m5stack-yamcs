@@ -30,6 +30,8 @@ import termios
 import time
 
 PRIMARY_HEADER = struct.Struct(">HHH")
+# TM の副ヘッダ: 機上時刻 (Unix 時刻のミリ秒、わからなければ0)。TM はすべて持つ (#54)
+SECONDARY_HEADER = struct.Struct(">Q")
 
 APID_GNSS = 100
 APID_HOUSEKEEPING = 101
@@ -133,19 +135,41 @@ def decode_header(data):
     header = {
         "version": word1 >> 13,
         "type": (word1 >> 12) & 1,
+        "secondary": bool((word1 >> 11) & 1),
         "apid": word1 & 0x07FF,
         "seq": word2 & 0x3FFF,
         "length": length,
+        "time_ms": None,
     }
     if length + 1 + PRIMARY_HEADER.size != len(data):
         raise ValueError(f"length field {length} does not match packet size {len(data)}")
+    if header["secondary"]:
+        if len(data) < PRIMARY_HEADER.size + SECONDARY_HEADER.size:
+            raise ValueError(f"packet too short for secondary header: {len(data)} bytes")
+        (header["time_ms"],) = SECONDARY_HEADER.unpack_from(data, PRIMARY_HEADER.size)
     return header
 
 
+def payload_offset(data):
+    """パケットの中身が始まる位置 (副ヘッダがあれば、その後ろ)"""
+    word1 = PRIMARY_HEADER.unpack_from(data)[0]
+    return PRIMARY_HEADER.size + (SECONDARY_HEADER.size if (word1 >> 11) & 1 else 0)
+
+
+def format_packet_time(time_ms):
+    if time_ms is None:
+        return ""
+    if time_ms == 0:
+        return "t=--:--:--.---Z "
+    t = datetime.datetime.fromtimestamp(time_ms / 1000, datetime.timezone.utc)
+    return t.strftime("t=%H:%M:%S.") + f"{time_ms % 1000:03d}Z "
+
+
 def unpack_payload(payload_struct, data):
-    if len(data) != PRIMARY_HEADER.size + payload_struct.size:
+    offset = payload_offset(data)
+    if len(data) != offset + payload_struct.size:
         raise ValueError(f"unexpected packet size: {len(data)} bytes")
-    return payload_struct.unpack_from(data, PRIMARY_HEADER.size)
+    return payload_struct.unpack_from(data, offset)
 
 
 def format_gnss(data):
@@ -195,10 +219,11 @@ def format_utc(seconds):
 
 
 def format_observation(data):
-    if len(data) < PRIMARY_HEADER.size + OBSERVATION_HEADER.size:
+    start = payload_offset(data)
+    if len(data) < start + OBSERVATION_HEADER.size:
         raise ValueError(f"packet too short: {len(data)} bytes")
-    utc, count, tracked, max_cn0, avg_cn0, *per_system = OBSERVATION_HEADER.unpack_from(data, PRIMARY_HEADER.size)
-    offset = PRIMARY_HEADER.size + OBSERVATION_HEADER.size
+    utc, count, tracked, max_cn0, avg_cn0, *per_system = OBSERVATION_HEADER.unpack_from(data, start)
+    offset = start + OBSERVATION_HEADER.size
     if len(data) != offset + count * OBSERVATION_ENTRY.size:
         raise ValueError(f"unexpected packet size: {len(data)} bytes for {count} satellites")
     top = []
@@ -449,7 +474,7 @@ def main():
                 print(f"[{origin}] apid={apid}: {lost} packet(s) lost")
         last_seq[key] = header["seq"]
 
-        print(f"[{origin}] apid={apid} seq={header['seq']:5d} {text}")
+        print(f"[{origin}] apid={apid} seq={header['seq']:5d} {format_packet_time(header['time_ms'])}{text}")
 
     def uplink(tc):
         try:

@@ -25,11 +25,11 @@ uint32_t toUnixTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uin
 }
 
 size_t encode(const GnssTelemetry& t, uint32_t validSentences, uint32_t checksumErrors,
-              uint32_t uptimeMs, uint16_t sequenceCount, uint8_t* buffer, size_t size) {
+              uint32_t uptimeMs, uint16_t sequenceCount, uint64_t timeMs, uint8_t* buffer, size_t size) {
   if (size < kPacketSize) return 0;
 
   PacketWriter w(buffer);
-  w.primaryHeader(kApid, sequenceCount, kPacketSize);
+  w.header(kApid, sequenceCount, kPacketSize, timeMs);
 
   // UTC時刻は日付と時刻の両方が揃ったときだけ入れる
   bool hasUtc = t.timeValid && t.dateValid;

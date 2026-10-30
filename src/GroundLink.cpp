@@ -18,28 +18,28 @@ void GroundLink::describe(char* text, size_t size) const {
 void GroundLink::sendGnss(const NmeaParser& parser) {
   uint8_t packet[TelemetryPacket::kPacketSize];
   size_t size = TelemetryPacket::encode(parser.telemetry(), parser.validSentences(),
-                                        parser.checksumErrors(), millis(), gnssSequence_, packet,
+                                        parser.checksumErrors(), millis(), gnssSequence_, now(), packet,
                                         sizeof(packet));
   send(packet, size, gnssSequence_);
 }
 
 void GroundLink::sendHousekeeping(const HousekeepingPacket::Housekeeping& hk) {
   uint8_t packet[HousekeepingPacket::kPacketSize];
-  size_t size = HousekeepingPacket::encode(hk, housekeepingSequence_, packet, sizeof(packet));
+  size_t size = HousekeepingPacket::encode(hk, housekeepingSequence_, now(), packet, sizeof(packet));
   send(packet, size, housekeepingSequence_);
 }
 
 void GroundLink::sendAck(uint16_t tcSequence, uint8_t commandId, AckPacket::Stage stage,
                          uint8_t errorCode) {
   uint8_t packet[AckPacket::kPacketSize];
-  size_t size = AckPacket::encode(tcSequence, commandId, stage, errorCode, ackSequence_, packet,
+  size_t size = AckPacket::encode(tcSequence, commandId, stage, errorCode, ackSequence_, now(), packet,
                                   sizeof(packet));
   send(packet, size, ackSequence_);
 }
 
 void GroundLink::sendEvent(const EventPacket::Event& event) {
   uint8_t packet[EventPacket::kPacketSize];
-  size_t size = EventPacket::encode(event, eventSequence_, packet, sizeof(packet));
+  size_t size = EventPacket::encode(event, eventSequence_, now(), packet, sizeof(packet));
   send(packet, size, eventSequence_);
 }
 
@@ -47,7 +47,8 @@ void GroundLink::sendObservation(uint32_t utcTime, const NmeaParser& parser) {
   SatelliteInfo satellites[NmeaParser::kMaxSatellites];
   size_t count = parser.currentSatellites(satellites, NmeaParser::kMaxSatellites);
   uint8_t packet[ObservationPacket::kMaxPacketSize];
-  size_t size = ObservationPacket::encode(utcTime, satellites, count, observationSequence_, packet, sizeof(packet));
+  size_t size =
+      ObservationPacket::encode(utcTime, satellites, count, observationSequence_, now(), packet, sizeof(packet));
   send(packet, size, observationSequence_);
 }
 

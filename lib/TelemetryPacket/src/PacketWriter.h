@@ -34,17 +34,22 @@ class PacketWriter {
     u64(bits);
   }
 
-  // CCSDS Primary Header (TM, 2次ヘッダなし, 分割なし) を書き込む
-  void primaryHeader(uint16_t apid, uint16_t sequenceCount, size_t packetSize) {
-    // version(3)=0, type(1)=0:TM, secondary header flag(1)=0, APID(11)
-    u16(apid & 0x07FF);
+  // CCSDS Primary Header (TM, 分割なし) と、副ヘッダ (機上時刻) を書き込む。
+  // timeMs: パケットを作った機上時刻 (Unix 時刻のミリ秒)。わからなければ0
+  void header(uint16_t apid, uint16_t sequenceCount, size_t packetSize, uint64_t timeMs) {
+    // version(3)=0, type(1)=0:TM, secondary header flag(1)=1, APID(11)
+    u16(0x0800 | (apid & 0x07FF));
     // sequence flags(2)=0b11:unsegmented, sequence count(14)
     u16(0xC000 | (sequenceCount & 0x3FFF));
-    // packet data length = データ部のバイト数 - 1
+    // packet data length = データ部 (副ヘッダを含む) のバイト数 - 1
     u16(static_cast<uint16_t>(packetSize - kPrimaryHeaderSize - 1));
+    u64(timeMs);
   }
 
   static const size_t kPrimaryHeaderSize = 6;
+  static const size_t kSecondaryHeaderSize = 8;
+  // Primary Header + 副ヘッダ。各パケットの中身はこのあとから始まる
+  static const size_t kHeaderSize = kPrimaryHeaderSize + kSecondaryHeaderSize;
 
  private:
   uint8_t* p_;

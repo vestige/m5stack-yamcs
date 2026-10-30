@@ -56,6 +56,9 @@ PayloadLed payloadLed(PAYLOAD_LED_PIN);
 IntervalTimer telemetryTimer;
 IntervalTimer displayTimer;
 
+// パケットの副ヘッダに入れる機上時刻 (Unix 時刻のミリ秒。GPS の時刻で合わせるまでは0)
+uint64_t onboardTimeMs() { return satellite.clock().nowMillis(millis()); }
+
 // HK を先に送る。地上は、GNSS の値をアラームで判定するときに HK の値 (ペイロードを入れてからの秒数) を使うので、
 // 先に届いていないと、古い値 (再起動の前の値など) で判定してしまう
 void sendTelemetry() {
@@ -133,6 +136,7 @@ void setup() {
   reportBoot();
   activeLink = LinkSetting::load(GROUND_LINK_ESPNOW ? LinkSetting::Link::EspNow : LinkSetting::Link::Udp);
   Serial.printf("Ground link: %s\n", LinkSetting::name(activeLink));
+  groundLink.setTimeSource(onboardTimeMs);
   if (activeLink == LinkSetting::Link::EspNow) {
     groundLink.begin(espNowTransport);
   } else {

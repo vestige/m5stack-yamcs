@@ -43,6 +43,15 @@
 				</UnitSet>
 				<IntegerDataEncoding sizeInBits="16" />
 			</IntegerParameterType>
+			<!-- 副ヘッダの機上時刻: Unix 時刻のミリ秒 (#54)。衛星が GPS の時刻で合わせるまでは0 (1970-01-01) -->
+			<AbsoluteTimeParameterType name="Packet_Time_Type">
+				<Encoding units="seconds" scale="0.001">
+					<IntegerDataEncoding sizeInBits="64" />
+				</Encoding>
+				<ReferenceTime>
+					<Epoch>UNIX</Epoch>
+				</ReferenceTime>
+			</AbsoluteTimeParameterType>
 		</ParameterTypeSet>
 
 		<ParameterSet>
@@ -53,9 +62,11 @@
 			<Parameter name="CCSDS_Group_Flags" parameterTypeRef="CCSDS_Group_Flags_Type" />
 			<Parameter name="CCSDS_Sequence_Count" parameterTypeRef="CCSDS_Sequence_Count_Type" />
 			<Parameter name="CCSDS_Packet_Length" parameterTypeRef="CCSDS_Packet_Length_Type" />
+			<Parameter name="PacketTime" parameterTypeRef="Packet_Time_Type" shortDescription="パケットを作った機上時刻 (副ヘッダ)。わからなければ 1970-01-01" />
 		</ParameterSet>
 
 		<ContainerSet>
+			<!-- すべての TM の共通のヘッダ: Primary Header (6バイト) と、副ヘッダの機上時刻 (8バイト) -->
 			<SequenceContainer name="CCSDSPacket" abstract="true">
 				<EntryList>
 					<ParameterRefEntry parameterRef="CCSDS_Version" />
@@ -65,6 +76,7 @@
 					<ParameterRefEntry parameterRef="CCSDS_Group_Flags" />
 					<ParameterRefEntry parameterRef="CCSDS_Sequence_Count" />
 					<ParameterRefEntry parameterRef="CCSDS_Packet_Length" />
+					<ParameterRefEntry parameterRef="PacketTime" />
 				</EntryList>
 			</SequenceContainer>
 		</ContainerSet>
@@ -311,7 +323,7 @@
 			</ParameterSet>
 
 			<ContainerSet>
-				<!-- APID 101: HK (offset 6 以降) -->
+				<!-- APID 101: HK (offset 14 以降。共通のヘッダのあと) -->
 				<SequenceContainer name="Housekeeping">
 					<!-- 最低でも10秒に1回は届く (SET_TM_INTERVAL の上限)。届かなくなると約19秒 (10秒 × 1.9) で値が期限切れ (EXPIRED) になる -->
 					<DefaultRateInStream basis="perSecond" minimumValue="0.1" />
@@ -1059,7 +1071,7 @@ switch (severity.value) {
 			</ParameterSet>
 
 			<ContainerSet>
-				<!-- APID 100: GNSSテレメトリ (offset 6 以降) -->
+				<!-- APID 100: GNSSテレメトリ (offset 14 以降。共通のヘッダのあと) -->
 				<SequenceContainer name="GnssTelemetry">
 					<!-- ペイロードがONの間は HK と同じ周期で届く。ペイロードを切ったり通信が途切れたりすると、約19秒で期限切れになる -->
 					<DefaultRateInStream basis="perSecond" minimumValue="0.1" />
