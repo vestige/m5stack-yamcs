@@ -5,6 +5,7 @@
 #include <HousekeepingPacket.h>
 #include <NmeaParser.h>
 
+#include "DataRecorder.h"
 #include "PacketTransport.h"
 
 // 地上局との通信: TMの送信 (APIDごとのシーケンス番号) とTCの受信。運び方は PacketTransport に任せる
@@ -14,6 +15,8 @@ class GroundLink {
   void begin(PacketTransport& transport);
   // パケットに入れる機上時刻 (Unix 時刻のミリ秒。わからなければ0) を返す関数
   void setTimeSource(uint64_t (*timeMs)()) { timeMs_ = timeMs; }
+  // 送るパケットを、データレコーダにも記録する (地上に届くかどうかにかかわらず)
+  void setRecorder(DataRecorder* recorder) { recorder_ = recorder; }
   bool connected() const { return transport_ && transport_->ready(); }
   int8_t rssi() const { return transport_ ? transport_->rssi() : 0; }
   uint32_t packetsSent() const { return packetsSent_; }
@@ -35,6 +38,7 @@ class GroundLink {
 
   PacketTransport* transport_ = nullptr;
   uint64_t (*timeMs_)() = nullptr;
+  DataRecorder* recorder_ = nullptr;
   uint32_t packetsSent_ = 0;
 
   uint16_t gnssSequence_ = 0;

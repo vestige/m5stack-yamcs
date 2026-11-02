@@ -46,8 +46,8 @@ GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
 # mode, payloadPower, accepted, rejected, lastCommand, rssi, freeHeap, minFreeHeap, uptime, bootCount, resetReason,
 # fdirEnabled, lastFault, faultCount, onboardTime, observationState, observationStart, observationDuration,
 # lastObservationResult, lastObservationStart, lastObservationLength, completedObservations, lampColor, lampRemaining,
-# payloadOnTime
-HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHHBHH")
+# payloadOnTime, recorderState, recorderFreeMB, recorderRecords
+HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHHBHHBHI")
 # tcSequence, commandId, stage, errorCode
 ACK_PAYLOAD = struct.Struct(">HBBB")
 # severity, eventId, arg1, arg2
@@ -58,6 +58,7 @@ OBSERVATION_HEADER = struct.Struct(">IBBBBBBBBB")
 OBSERVATION_ENTRY = struct.Struct(">BBbHB")
 GNSS_SYSTEM = {0: "G", 1: "R", 2: "E", 3: "C", 4: "J", 5: "I"}
 OBSERVATION_STATE = {0: "NONE", 1: "SCHEDULED", 2: "ACTIVE"}
+RECORDER_STATE = {0: "NO_CARD", 1: "RECORDING", 2: "WAITING_TIME", 3: "ERROR"}
 LAMP_COLOR = {0: "OFF", 1: "RED", 2: "GREEN", 3: "BLUE", 4: "YELLOW", 5: "CYAN", 6: "MAGENTA", 7: "WHITE"}
 OBSERVATION_RESULT = {0: "NONE", 1: "COMPLETED", 2: "ABORTED", 3: "SKIPPED_PAYLOAD_OFF",
                       4: "SKIPPED_NOT_NOMINAL", 5: "CANCELLED"}
@@ -110,6 +111,7 @@ EVENT_ID = {
     13: "OBSERVATION_CANCELLED",
     14: "LAMP_ON",
     15: "LAMP_OFF",
+    16: "RECORDER_STATE_CHANGED",
 }
 # ESP-IDF の esp_reset_reason_t
 RESET_REASON = {
@@ -196,7 +198,7 @@ def format_housekeeping(data):
     (mode, payload, accepted, rejected, last_command, rssi, free_heap, min_free_heap, uptime, boot_count,
      reset_reason, fdir, last_fault, fault_count, onboard_time, obs_state, obs_start,
      obs_duration, last_result, last_start, last_length, completed, lamp_color,
-     lamp_remaining, payload_on_time) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
+     lamp_remaining, payload_on_time, rec_state, rec_free, rec_records) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
     return (
         f"HK   mode={MODE.get(mode, mode)} payload={'ON(' + str(payload_on_time) + 's)' if payload else 'OFF'} "
         f"cmd(ok={accepted} ng={rejected} last={COMMAND.get(last_command, 'NONE')}) rssi={rssi}dBm "
@@ -209,6 +211,7 @@ def format_housekeeping(data):
         + (f"({format_utc(last_start)} {last_length}s)" if last_result else "")
         + f" done={completed}"
         + (f" lamp={LAMP_COLOR.get(lamp_color, lamp_color)}({lamp_remaining}s)" if lamp_color else "")
+        + f" rec={RECORDER_STATE.get(rec_state, rec_state)}({rec_records}, free {rec_free}MB)"
     )
 
 

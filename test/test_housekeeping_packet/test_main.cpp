@@ -22,13 +22,13 @@ void test_primary_header() {
   HousekeepingPacket::Housekeeping hk;
   uint8_t buf[HousekeepingPacket::kPacketSize];
   size_t n = HousekeepingPacket::encode(hk, 7, kPacketTimeMs, buf, sizeof(buf));
-  TEST_ASSERT_EQUAL(66, n);
+  TEST_ASSERT_EQUAL(73, n);
 
   // version=0, type=TM, secondary header=1, APID=101
   TEST_ASSERT_EQUAL_HEX16(0x0865, readU16(buf));
   TEST_ASSERT_EQUAL_HEX16(0xC007, readU16(buf + 2));
-  // データ部60バイト (副ヘッダ8 + 中身52) → length=59
-  TEST_ASSERT_EQUAL_UINT16(59, readU16(buf + 4));
+  // データ部67バイト (副ヘッダ8 + 中身59) → length=66
+  TEST_ASSERT_EQUAL_UINT16(66, readU16(buf + 4));
   // 副ヘッダ: 機上時刻 (ミリ秒、ビッグエンディアン)
   const uint8_t time[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   TEST_ASSERT_EQUAL_HEX8_ARRAY(time, buf + 6, 8);
@@ -61,6 +61,9 @@ void test_payload() {
   hk.lampColor = HousekeepingPacket::LampColor::Magenta;
   hk.lampRemaining = 590;
   hk.payloadOnTime = 1234;
+  hk.recorderState = 1;
+  hk.recorderFreeMB = 15000;
+  hk.recorderRecords = 123456;
 
   uint8_t buf[HousekeepingPacket::kPacketSize];
   HousekeepingPacket::encode(hk, 0, kPacketTimeMs, buf, sizeof(buf));
@@ -90,6 +93,9 @@ void test_payload() {
   TEST_ASSERT_EQUAL_UINT8(6, buf[61]);
   TEST_ASSERT_EQUAL_UINT16(590, readU16(buf + 62));
   TEST_ASSERT_EQUAL_UINT16(1234, readU16(buf + 64));
+  TEST_ASSERT_EQUAL_UINT8(1, buf[66]);
+  TEST_ASSERT_EQUAL_UINT16(15000, readU16(buf + 67));
+  TEST_ASSERT_EQUAL_UINT32(123456, readU32(buf + 69));
 }
 
 void test_defaults() {

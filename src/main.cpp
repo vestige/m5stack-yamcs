@@ -6,6 +6,7 @@
 
 #include "BusMonitor.h"
 #include "CommandHandler.h"
+#include "DataRecorder.h"
 #include "EspNowTransport.h"
 #include "GnssReceiver.h"
 #include "GroundLink.h"
@@ -48,6 +49,7 @@ EspNowTransport espNowTransport(ESPNOW_CHANNEL);
 LinkSetting::Link activeLink;
 GroundLink groundLink;
 TrainingFaults training;
+DataRecorder recorder;
 CommandHandler commands(satellite, groundLink, training);
 BusMonitor bus;
 TelemetryDisplay display;
@@ -62,7 +64,11 @@ uint64_t onboardTimeMs() { return satellite.clock().nowMillis(millis()); }
 // HK を先に送る。地上は、GNSS の値をアラームで判定するときに HK の値 (ペイロードを入れてからの秒数) を使うので、
 // 先に届いていないと、古い値 (再起動の前の値など) で判定してしまう
 void sendTelemetry() {
-  groundLink.sendHousekeeping(bus.collect(satellite, groundLink));
+  HousekeepingPacket::Housekeeping hk = bus.collect(satellite, groundLink);
+  hk.recorderState = static_cast<uint8_t>(recorder.state());
+  hk.recorderFreeMB = recorder.freeMB();
+  hk.recorderRecords = recorder.records();
+  groundLink.sendHousekeeping(hk);
   if (satellite.payloadPower()) groundLink.sendGnss(gnss.parser());
   if (satellite.payloadPower() && satellite.mode() == Satellite::OperationMode::Mission) {
     groundLink.sendObservation(satellite.clock().now(millis()), gnss.parser());
@@ -73,6 +79,24 @@ void sendTelemetry() {
 void sendEvents() {
   EventPacket::Event event;
   while (groundLink.connected() && satellite.popEvent(&event)) groundLink.sendEvent(event);
+}
+
+// データレコーダの状態が変わったら、イベントで知らせる (microSD を抜いた、書き込みに失敗した など)
+void reportRecorderState() {
+  static DataRecorder::State reported = DataRecorder::State::NoCard;
+  static bool first = true;
+  DataRecorder::State state = recorder.state();
+  if (!first && state == reported) return;
+  first = false;
+  reported = state;
+  EventPacket::Event event;
+  event.severity = state == DataRecorder::State::Recording || state == DataRecorder::State::WaitingTime
+                       ? EventPacket::Severity::Info
+                       : EventPacket::Severity::Warning;
+  event.id = EventPacket::EventId::RecorderStateChanged;
+  event.arg1 = static_cast<uint16_t>(state);
+  event.arg2 = recorder.freeMB();
+  satellite.report(event);
 }
 
 void reportBoot() {
@@ -137,6 +161,8 @@ void setup() {
   activeLink = LinkSetting::load(GROUND_LINK_ESPNOW ? LinkSetting::Link::EspNow : LinkSetting::Link::Udp);
   Serial.printf("Ground link: %s\n", LinkSetting::name(activeLink));
   groundLink.setTimeSource(onboardTimeMs);
+  recorder.begin();
+  groundLink.setRecorder(&recorder);
   if (activeLink == LinkSetting::Link::EspNow) {
     groundLink.begin(espNowTransport);
   } else {
@@ -154,6 +180,8 @@ void loop() {
   satellite.checkHealth(millis(), gnss.lastSentenceMs());
   satellite.updateObservation(millis());
   satellite.updateLamp(millis());
+  recorder.poll(millis());
+  reportRecorderState();
   sendEvents();
   payloadLed.show(satellite.payloadPower());
 

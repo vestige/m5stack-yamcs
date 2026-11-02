@@ -158,6 +158,31 @@
 						<Enumeration value="7" label="WHITE" />
 					</EnumerationList>
 				</EnumeratedParameterType>
+				<EnumeratedParameterType name="Recorder_State_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="NO_CARD" />
+						<Enumeration value="1" label="RECORDING" />
+						<Enumeration value="2" label="WAITING_TIME" />
+						<Enumeration value="3" label="ERROR" />
+					</EnumerationList>
+					<!-- 記録できていないと、パスの外のデータが失われるので警告する -->
+					<DefaultAlarm>
+						<EnumerationAlarmList>
+							<EnumerationAlarm alarmLevel="warning" enumerationLabel="NO_CARD" />
+							<EnumerationAlarm alarmLevel="warning" enumerationLabel="ERROR" />
+						</EnumerationAlarmList>
+					</DefaultAlarm>
+				</EnumeratedParameterType>
+				<IntegerParameterType name="Megabytes_Type" signed="false">
+					<UnitSet>
+						<Unit>MB</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="16" />
+				</IntegerParameterType>
+				<IntegerParameterType name="Record_Count_Type" signed="false">
+					<IntegerDataEncoding sizeInBits="32" />
+				</IntegerParameterType>
 				<IntegerParameterType name="Observation_Count_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="16" />
 				</IntegerParameterType>
@@ -230,6 +255,7 @@
 						<Enumeration value="13" label="OBSERVATION_CANCELLED" />
 						<Enumeration value="14" label="LAMP_ON" />
 						<Enumeration value="15" label="LAMP_OFF" />
+						<Enumeration value="16" label="RECORDER_STATE_CHANGED" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Event_Arg_Type" signed="false">
@@ -312,6 +338,9 @@
 				<Parameter name="LampColor" parameterTypeRef="Lamp_Color_Type" shortDescription="ミッション要求のランプの色 (OFF=消えている)" />
 				<Parameter name="LampRemaining" parameterTypeRef="Seconds_Type" shortDescription="ランプが消えるまでの時間" />
 				<Parameter name="PayloadOnTime" parameterTypeRef="Seconds_Type" shortDescription="ペイロードの電源を入れてからの時間 (OFF なら0)。立ち上がり中かの判断に使う" />
+				<Parameter name="RecorderState" parameterTypeRef="Recorder_State_Type" shortDescription="データレコーダ (microSD) の状態" />
+				<Parameter name="RecorderFreeMB" parameterTypeRef="Megabytes_Type" shortDescription="データレコーダ (microSD) の空き" />
+				<Parameter name="RecorderRecords" parameterTypeRef="Record_Count_Type" shortDescription="起動してからデータレコーダに記録したパケットの数" />
 				<Parameter name="AckTcSequence" parameterTypeRef="Tc_Sequence_Type" shortDescription="ACK: どのTC (シーケンス番号) への応答か" />
 				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
 				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
@@ -353,6 +382,9 @@
 						<ParameterRefEntry parameterRef="LampColor" />
 						<ParameterRefEntry parameterRef="LampRemaining" />
 						<ParameterRefEntry parameterRef="PayloadOnTime" />
+						<ParameterRefEntry parameterRef="RecorderState" />
+						<ParameterRefEntry parameterRef="RecorderFreeMB" />
+						<ParameterRefEntry parameterRef="RecorderRecords" />
 					</EntryList>
 					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
 						<RestrictionCriteria>
@@ -414,6 +446,7 @@ var MODE = ["SAFE", "NOMINAL", "MISSION"];
 var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP", "SET_FDIR",
                "SCHEDULE_OBSERVATION", "CANCEL_OBSERVATION", "SET_LAMP"];
 var LAMP = ["OFF", "RED", "GREEN", "BLUE", "YELLOW", "CYAN", "MAGENTA", "WHITE"];
+var RECORDER_STATE = ["microSD がありません", "記録しています", "機上時刻がわからないので、まだ記録していません", "書き込みに失敗しました"];
 var LAMP_OFF_REASON = ["コマンドで消しました", "点灯時間が過ぎました", "SAFE になったので消しました",
                        "ペイロードの電源が切れたので消しました"];
 var FAULT = ["NONE", "GNSSのデータが届きません"];
@@ -467,6 +500,9 @@ switch (eventId.value) {
     break;
   case "OBSERVATION_CANCELLED":
     message = a1 == 1 ? "観測中の観測を取り消しました" : "観測の予約を取り消しました";
+    break;
+  case "RECORDER_STATE_CHANGED":
+    message = "データレコーダ: " + name(RECORDER_STATE, a1) + " (空き " + a2 + "MB)";
     break;
   case "LAMP_ON":
     message = "ランプを " + name(LAMP, a1) + " で点けました (" + a2 + "秒間)";
