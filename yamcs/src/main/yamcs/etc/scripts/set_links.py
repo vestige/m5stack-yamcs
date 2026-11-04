@@ -14,7 +14,8 @@ import time
 import urllib.request
 
 TM_LINK = "m5stack-gnss"
-LINKS = [TM_LINK, "m5stack-tc"]
+# ダンプのリンクも止める。パスの外まで続いたダンプは地上に届かない (降ろしきれなかった分は、次のパスでもう一度)
+LINKS = [TM_LINK, "m5stack-dump", "m5stack-tc"]
 WAIT_SECONDS = 15
 
 URL = os.environ.get("YAMCS_URL", "http://localhost:8090").rstrip("/")

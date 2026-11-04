@@ -27,6 +27,8 @@ class GroundLink {
   void sendAck(uint16_t tcSequence, uint8_t commandId, AckPacket::Stage stage, uint8_t errorCode);
   void sendEvent(const EventPacket::Event& event);
   void sendObservation(uint32_t utcTime, const NmeaParser& parser);
+  // データレコーダから読んだパケットを、ダンプのパケット (APID 105) に入れて送る
+  void sendDump(const uint8_t* recorded, size_t size);
 
   // 届いたTCを1つ buffer に読み込む。戻り値はTCの本来の長さ (buffer より長いこともある)。なければ0
   size_t receiveTelecommand(uint8_t* buffer, size_t capacity);
@@ -46,4 +48,5 @@ class GroundLink {
   uint16_t ackSequence_ = 0;
   uint16_t eventSequence_ = 0;
   uint16_t observationSequence_ = 0;
+  uint16_t dumpSequence_ = 0;
 };

@@ -1,7 +1,9 @@
+#include <DumpPacket.h>
 #include <EventPacket.h>
 #include <HousekeepingPacket.h>
 #include <RecordFormat.h>
 #include <TelemetryPacket.h>
+#include <string.h>
 #include <unity.h>
 
 using RecordFormat::Source;
@@ -54,6 +56,45 @@ void test_file_path() {
   TEST_ASSERT_EQUAL_STRING("/rec/bus", path);
 }
 
+void test_hour_key() {
+  char key[RecordFormat::kHourKeyLength];
+  RecordFormat::hourKey(static_cast<uint32_t>(kTimeMs / 1000), key, sizeof(key));
+  TEST_ASSERT_EQUAL_STRING("20261030/06", key);
+  // 文字の順が時刻の順になる (日をまたいでも)
+  char next[RecordFormat::kHourKeyLength];
+  RecordFormat::hourKey(1793404800, next, sizeof(next));  // 2026-10-31T00:00:00Z
+  TEST_ASSERT_EQUAL_STRING("20261031/00", next);
+  TEST_ASSERT_TRUE(strcmp(key, next) < 0);
+  RecordFormat::hourKey(0, key, sizeof(key));
+  TEST_ASSERT_EQUAL_STRING("19700101/00", key);
+}
+
+void test_dump_packet() {
+  uint8_t event[EventPacket::kPacketSize];
+  EventPacket::encode(EventPacket::Event(), 5, kTimeMs, event, sizeof(event));
+  uint8_t dump[DumpPacket::kMaxPacketSize];
+  const uint64_t dumpTimeMs = kTimeMs + 3600000;
+  size_t n = DumpPacket::encode(event, sizeof(event), 9, dumpTimeMs, dump, sizeof(dump));
+  TEST_ASSERT_EQUAL(14 + sizeof(event), n);
+  // APID 105、外側の時刻はダンプした時刻、中は記録したパケットそのまま
+  TEST_ASSERT_EQUAL_HEX8(0x08, dump[0]);
+  TEST_ASSERT_EQUAL_HEX8(0x69, dump[1]);
+  TEST_ASSERT_EQUAL_HEX8(0xC0, dump[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x09, dump[3]);
+  TEST_ASSERT_EQUAL_UINT16(n - 7, (dump[4] << 8) | dump[5]);
+  TEST_ASSERT_TRUE(RecordFormat::packetTimeMs(dump, n) == dumpTimeMs);
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(event, dump + 14, sizeof(event));
+  // ダンプのパケットは、もう一度記録しない
+  Source source;
+  TEST_ASSERT_FALSE(RecordFormat::sourceOf(dump, n, &source));
+  // 地上局の無線 (ESP-NOW) の1回で送れる大きさに収まる
+  TEST_ASSERT_TRUE(DumpPacket::kMaxPacketSize <= 250);
+  // 中が大きすぎる・空・書き込む場所が足りないときは作らない
+  TEST_ASSERT_EQUAL(0, DumpPacket::encode(event, DumpPacket::kMaxRecordedSize + 1, 0, 0, dump, sizeof(dump)));
+  TEST_ASSERT_EQUAL(0, DumpPacket::encode(event, 0, 0, 0, dump, sizeof(dump)));
+  TEST_ASSERT_EQUAL(0, DumpPacket::encode(event, sizeof(event), 0, 0, dump, 20));
+}
+
 void test_length() {
   uint8_t out[2];
   RecordFormat::writeLength(219, out);
@@ -66,6 +107,8 @@ int main(int, char**) {
   RUN_TEST(test_source_by_apid);
   RUN_TEST(test_packet_time);
   RUN_TEST(test_file_path);
+  RUN_TEST(test_hour_key);
+  RUN_TEST(test_dump_packet);
   RUN_TEST(test_length);
   return UNITY_END();
 }

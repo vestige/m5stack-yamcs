@@ -20,6 +20,8 @@ const size_t kSourceCount = 2;
 
 const size_t kLengthSize = 2;
 const size_t kMaxPathLength = 32;
+// 1時間分のファイルを表す「年月日/時」(例: 20261030/06)。文字の順に並べると時刻の順になる
+const size_t kHourKeyLength = 12;
 
 // パケットの APID から、どの機器のデータかを決める。記録しないパケットなら false
 bool sourceOf(const uint8_t* packet, size_t size, Source* source);
@@ -31,6 +33,8 @@ uint64_t packetTimeMs(const uint8_t* packet, size_t size);
 // 記録するファイルの名前と、その機器のフォルダ (/rec/<機器>) を作る
 void filePath(Source source, uint32_t utcSec, char* out, size_t size);
 void sourceDir(Source source, char* out, size_t size);
+// その時刻を含む1時間分のファイルの「年月日/時」。ダンプや消去で、どのファイルが範囲に入るかを比べるのに使う
+void hourKey(uint32_t utcSec, char* out, size_t size);
 
 // 1件の記録の頭 (長さ) を書き込む
 void writeLength(size_t packetSize, uint8_t* out);

@@ -25,7 +25,14 @@ enum class CommandId : uint8_t {
   ScheduleObservation = 8,  // uint32 開始時刻 (Unix秒), uint16 長さ (秒)
   CancelObservation = 9,
   SetLamp = 10,  // uint8 色 (LampColor), uint16 点灯時間 (秒)。ミッション要求で使う
+  // データレコーダ (#56)。機器は RecorderSource
+  DumpRecorder = 11,   // uint8 機器, uint32 開始 (Unix秒。0=まだ消していない分の始めから), uint32 終わり (Unix秒。0=今)
+  StopDump = 12,       // ダンプを途中で止める
+  ClearRecorder = 13,  // uint8 機器, uint32 この時刻より前を、降ろし終えた分として消す (Unix秒)
 };
+
+// データレコーダのコマンドで、どの機器の記録を扱うか (RecordFormat::Source と同じ番号。All は全部)
+enum class RecorderSource : uint8_t { Bus = 0, Gnss = 1, All = 2 };
 
 // コマンドを拒否・失敗した理由 (ACKで地上へ返す)
 enum class ErrorCode : uint8_t {

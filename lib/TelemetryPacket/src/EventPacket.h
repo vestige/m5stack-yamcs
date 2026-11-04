@@ -38,6 +38,9 @@ enum class EventId : uint8_t {
   LampOn = 14,                // arg1: 色 (LampColor), arg2: 点灯時間 (秒)
   LampOff = 15,               // arg1: 消す前の色, arg2: 0=コマンドで消した, 1=時間が来た, 2=SAFEになった, 3=ペイロードの電源が切れた
   RecorderStateChanged = 16,  // arg1: データレコーダの状態 (0=NO_CARD, 1=RECORDING, 2=WAITING_TIME, 3=ERROR), arg2: 空き (MB)
+  DumpStarted = 17,           // arg1: 機器 (0=bus, 1=gnss, 2=全部), arg2: 降ろす量 (KB、65535で頭打ち)
+  DumpEnded = 18,             // arg1: 0=降ろし終えた, 1=コマンドで止めた, 2=microSD が読めない, arg2: 送ったパケットの数 (65535で頭打ち)
+  RecorderCleared = 19,       // arg1: 機器 (0=bus, 1=gnss, 2=全部), arg2: 消したファイルの数
 };
 
 struct Event {

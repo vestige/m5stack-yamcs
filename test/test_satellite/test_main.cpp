@@ -726,6 +726,65 @@ void test_payload_on_time() {
   TEST_ASSERT_EQUAL_UINT16(15, hk.payloadOnTime);
 }
 
+std::vector<uint8_t> u32(uint32_t v) {
+  return {static_cast<uint8_t>(v >> 24), static_cast<uint8_t>(v >> 16), static_cast<uint8_t>(v >> 8),
+          static_cast<uint8_t>(v)};
+}
+
+std::vector<uint8_t> dumpArgs(uint8_t source, uint32_t start, uint32_t end) {
+  std::vector<uint8_t> args = {source};
+  std::vector<uint8_t> s = u32(start), e = u32(end);
+  args.insert(args.end(), s.begin(), s.end());
+  args.insert(args.end(), e.begin(), e.end());
+  return args;
+}
+
+std::vector<uint8_t> clearArgs(uint8_t source, uint32_t before) {
+  std::vector<uint8_t> args = {source};
+  std::vector<uint8_t> b = u32(before);
+  args.insert(args.end(), b.begin(), b.end());
+  return args;
+}
+
+// データレコーダのコマンドは、Satellite では引数だけ確かめ、実行は呼び出し側 (microSD を持つ側) に任せる
+void test_recorder_commands_are_passed_through() {
+  Satellite sat;
+  Satellite::Result r = send(sat, CommandId::DumpRecorder, dumpArgs(1, kUtc - 3600, kUtc));
+  TEST_ASSERT_TRUE(r.accepted);
+  TEST_ASSERT_TRUE(r.recorder.kind == Satellite::RecorderRequest::Kind::Dump);
+  TEST_ASSERT_TRUE(r.recorder.source == Telecommand::RecorderSource::Gnss);
+  TEST_ASSERT_EQUAL_UINT32(kUtc - 3600, r.recorder.startSec);
+  TEST_ASSERT_EQUAL_UINT32(kUtc, r.recorder.endSec);
+
+  // 0 は「まだ消していない分の始めから」「今まで」
+  r = send(sat, CommandId::DumpRecorder, dumpArgs(2, 0, 0));
+  TEST_ASSERT_TRUE(r.accepted);
+  TEST_ASSERT_TRUE(r.recorder.source == Telecommand::RecorderSource::All);
+
+  r = send(sat, CommandId::StopDump);
+  TEST_ASSERT_TRUE(r.accepted);
+  TEST_ASSERT_TRUE(r.recorder.kind == Satellite::RecorderRequest::Kind::StopDump);
+
+  r = send(sat, CommandId::ClearRecorder, clearArgs(0, kUtc));
+  TEST_ASSERT_TRUE(r.accepted);
+  TEST_ASSERT_TRUE(r.recorder.kind == Satellite::RecorderRequest::Kind::Clear);
+  TEST_ASSERT_TRUE(r.recorder.source == Telecommand::RecorderSource::Bus);
+  TEST_ASSERT_EQUAL_UINT32(kUtc, r.recorder.endSec);
+
+  // ほかのコマンドでは、データレコーダに何もさせない
+  TEST_ASSERT_TRUE(send(sat, CommandId::NoOp).recorder.kind == Satellite::RecorderRequest::Kind::None);
+}
+
+void test_recorder_argument_checks() {
+  Satellite sat;
+  TEST_ASSERT_TRUE(send(sat, CommandId::DumpRecorder, dumpArgs(3, 0, 0)).error == ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::DumpRecorder, dumpArgs(0, kUtc, kUtc)).error == ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::DumpRecorder, {0, 0, 0}).error == ErrorCode::InvalidLength);
+  TEST_ASSERT_TRUE(send(sat, CommandId::ClearRecorder, clearArgs(3, kUtc)).error == ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::ClearRecorder, clearArgs(0, 0)).error == ErrorCode::InvalidArgument);
+  TEST_ASSERT_TRUE(send(sat, CommandId::StopDump, {1}).error == ErrorCode::InvalidLength);
+}
+
 void test_lamp_needs_payload_power() {
   Satellite sat;
   send(sat, CommandId::SetLamp, lampArgs(Satellite::LampColor::Yellow, 300));
@@ -866,6 +925,8 @@ int main(int, char**) {
   RUN_TEST(test_lamp_off_by_command_and_safe);
   RUN_TEST(test_lamp_needs_payload_power);
   RUN_TEST(test_payload_on_time);
+  RUN_TEST(test_recorder_commands_are_passed_through);
+  RUN_TEST(test_recorder_argument_checks);
   RUN_TEST(test_observation_packet);
   RUN_TEST(test_observation_packet_limits_satellites);
   RUN_TEST(test_ack_packet);

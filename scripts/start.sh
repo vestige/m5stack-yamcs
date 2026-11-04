@@ -2,6 +2,7 @@
 # Mac側のプログラム (YAMCS、UDP受信スクリプト、ミッション要求サービス、Grafana) をバックグラウンドで起動する
 #
 #   M5Stack → :10015 udp_receiver.py (ログ記録) → :10016 YAMCS → http://localhost:8090
+#                                         ダンプ → :10017 YAMCS (記録した時刻でアーカイブへ)
 #   M5Stack ← :10025 udp_receiver.py (TCの中継) ← :10025 YAMCS
 #   M5Stack ~ ESP-NOW ~ M5StickC ─USB─ udp_receiver.py   (.env に GROUND_STATION_SERIAL を書いたとき)
 #
@@ -26,7 +27,7 @@ start_yamcs() {
   echo "yamcs: starting (JAVA_HOME=$java_home)"
   (
     cd "$ROOT_DIR/yamcs"
-    JAVA_HOME="$java_home" nohup ./mvnw -B yamcs:run >"$(log_file yamcs)" 2>&1 &
+    JAVA_HOME="$java_home" M5SAT_DUMP_STATS="$DUMP_STATS_FILE" nohup ./mvnw -B yamcs:run >"$(log_file yamcs)" 2>&1 &
     echo $! >"$(pid_file yamcs)"
   )
 
@@ -68,9 +69,9 @@ start_udp_receiver() {
     fi
     serial_args=(--serial "$GROUND_STATION_SERIAL")
   fi
-  echo "udp_receiver: starting (TM udp :$RECEIVER_PORT -> :$YAMCS_TM_PORT, TC udp :$UPLINK_PORT -> satellite${GROUND_STATION_SERIAL:+, ESP-NOW $GROUND_STATION_SERIAL})"
+  echo "udp_receiver: starting (TM udp :$RECEIVER_PORT -> :$YAMCS_TM_PORT, dump -> :$YAMCS_DUMP_PORT, TC udp :$UPLINK_PORT -> satellite${GROUND_STATION_SERIAL:+, ESP-NOW $GROUND_STATION_SERIAL})"
   nohup "$python" -u "$ROOT_DIR/tools/udp_receiver.py" --port "$RECEIVER_PORT" \
-    --forward "127.0.0.1:$YAMCS_TM_PORT" --uplink-port "$UPLINK_PORT" ${serial_args[@]+"${serial_args[@]}"} \
+    --forward "127.0.0.1:$YAMCS_TM_PORT" --dump-forward "127.0.0.1:$YAMCS_DUMP_PORT" --dump-stats "$DUMP_STATS_FILE" --uplink-port "$UPLINK_PORT" ${serial_args[@]+"${serial_args[@]}"} \
     >"$(log_file udp_receiver)" 2>&1 &
   echo $! >"$(pid_file udp_receiver)"
 

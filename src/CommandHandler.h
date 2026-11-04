@@ -4,14 +4,16 @@
 #include <Satellite.h>
 #include <TrainingFault.h>
 
+#include "DataRecorder.h"
 #include "GroundLink.h"
 
 // 地上から届いたTCを衛星に実行させ、受理・拒否・完了をACKで返す。
-// 訓練用のパケット (APID 111) は、ACKを返さずに訓練用の異常へ渡す
+// 訓練用のパケット (APID 111) は、ACKを返さずに訓練用の異常へ渡す。
+// データレコーダのコマンドは、受理したあとデータレコーダで実行し、できなければ FAILED を返す
 class CommandHandler {
  public:
-  CommandHandler(Satellite& satellite, GroundLink& link, TrainingFaults& training)
-      : satellite_(satellite), link_(link), training_(training) {}
+  CommandHandler(Satellite& satellite, GroundLink& link, TrainingFaults& training, DataRecorder& recorder)
+      : satellite_(satellite), link_(link), training_(training), recorder_(recorder) {}
 
   void poll();
 
@@ -30,11 +32,14 @@ class CommandHandler {
   void handle(const uint8_t* data, size_t size);
   void startBeep(const Telecommand::Packet& tc, uint16_t durationMs);
   void completePending();
+  // データレコーダへの指示を実行する。できなければ、その理由を返す
+  Telecommand::ErrorCode runRecorder(const Satellite::RecorderRequest& request);
   void ack(uint16_t tcSequence, uint8_t commandId, AckPacket::Stage stage,
            Telecommand::ErrorCode error = Telecommand::ErrorCode::None);
 
   Satellite& satellite_;
   GroundLink& link_;
   TrainingFaults& training_;
+  DataRecorder& recorder_;
   PendingCompletion pending_;
 };

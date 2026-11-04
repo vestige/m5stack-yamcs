@@ -13,11 +13,30 @@ services:
     args:
       name: realtime
       type: realtime
+  # ダンプ (#56) で届いたパケットを処理するプロセッサ。イベントの文章を作るアルゴリズムを動かすためだけに使う
+  # (運用画面の値やアラームはリアルタイムのプロセッサのまま。processor.yaml の dump)
+  - class: org.yamcs.ProcessorCreatorService
+    args:
+      name: dump
+      type: dump
   - class: org.yamcs.archive.CommandHistoryRecorder
   - class: org.yamcs.parameterarchive.ParameterArchive
     args:
+      # パラメータの履歴 (Grafana が読むもの) は、パケットのアーカイブから作る (#56)。
+      # リアルタイムの書き手 (realtimeFiller) を使うと、テレメトリが届いている間ずっと「今」の区切り (約2.3時間) を
+      # 押さえてしまい、ダンプで届いた同じ区切りのパラメータを書き込めない (パスの外の空白が埋まらない)。
+      # そこで、リアルタイムとダンプのどちらで届いても、パケットのアーカイブ (重なりは1つになっている) から作り直す
       realtimeFiller:
+        enabled: false
+      backFiller:
         enabled: true
+        monitorStreams: ["tm_realtime", "tm_dump"]
+        # パケットが届き続けている間は15秒ごとに、届かなくなったら (ダンプを降ろし終えた、LOS) 5秒後に作り直す。
+        # なので、Grafana のグラフに出るのは、届いてから15秒ほど後になる
+        streamUpdateFillPolicy:
+          - dataAge: 0
+            fillFrequency: 15
+            quietThreshold: 5
   - class: org.yamcs.plists.ParameterListService
   # Timeline (5-9)。パスや観測の予定を時間軸に並べ、予定の時刻にアクティビティ (スクリプトやスタック) を自動で始める
   - class: org.yamcs.timeline.TimelineService
@@ -39,10 +58,32 @@ dataLinks:
     port: 10016
     packetPreprocessorClassName: org.yamcs.tctm.GenericPacketPreprocessor
     packetPreprocessorArgs:
-      # パケットに受信時刻用のタイムスタンプが無いので、YAMCSの受信時刻を使う
-      # (GNSSのUTC時刻はパラメータ /GNSS/UtcTime として見られる)
-      timestampOffset: -1
+      # 時刻は、パケットの副ヘッダの機上時刻 (Unix 時刻のミリ秒、#54) を使う。ダンプ (#56) と同じ時刻になるので、
+      # 同じパケットがリアルタイムとダンプの両方で届いても、アーカイブには1つだけ残る (時刻 + シーケンス番号で1つに決まる)。
+      # 機上時刻がまだわからない (0) パケットには、tools/udp_receiver.py が受け取った時刻を入れる
+      timestampOffset: 6
+      timeEncoding:
+        type: FIXED
+        size: 8
+        epoch: UNIX
       # 先頭4バイト (APID + Sequence count) をシーケンス番号として使う
+      seqCountOffset: 0
+
+  # ダンプ (#56): データレコーダから降ろしたパケット。tools/udp_receiver.py が中のパケットを取り出して10017へ送る。
+  # リアルタイムとは別の流れ (tm_dump) に入れるので、運用画面の今の値は上書きしない。
+  # 時刻は、パケットの副ヘッダの機上時刻 (Unix 時刻のミリ秒) を使う。アーカイブには衛星で作った時刻で残る
+  - name: m5stack-dump
+    class: org.yamcs.tctm.UdpTmDataLink
+    stream: tm_dump
+    port: 10017
+    packetPreprocessorClassName: org.yamcs.tctm.GenericPacketPreprocessor
+    packetPreprocessorArgs:
+      timestampOffset: 6
+      # 8バイトの整数。YAMCS はこれをミリ秒として読む (秒に直す multiplier は付けない)
+      timeEncoding:
+        type: FIXED
+        size: 8
+        epoch: UNIX
       seqCountOffset: 0
 
   # 衛星へのTC。tools/udp_receiver.py (地上局) が受け取り、衛星へ中継する
@@ -65,6 +106,7 @@ streamConfig:
     - name: "tm_realtime"
       processor: "realtime"
     - name: "tm_dump"
+      processor: "dump"
   cmdHist: ["cmdhist_realtime", "cmdhist_dump"]
   event: ["events_realtime", "events_dump"]
   param: ["pp_realtime", "pp_dump", "sys_param", "proc_param"]

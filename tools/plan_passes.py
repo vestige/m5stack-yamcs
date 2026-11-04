@@ -15,6 +15,8 @@
 - パス (EVENT): 通信できる時間帯
 - AOS / LOS (アクティビティ): パスの始めにデータリンクを有効、終わりに無効にする (etc/scripts/set_links.py)
 - 通信の確認 (アクティビティ): AOS でテレメトリが届き始めたら、スタック 01-link-check.ycs を自動で実行する
+- ダンプ (アクティビティ): 通信の確認が終わったら、データレコーダの記録を降ろし、降ろせたら消す
+  (etc/scripts/dump_recorder.py)
 - 観測の予定 (EVENT): パスとパスの間の観測。パスの間に、運用者が SCHEDULE_OBSERVATION で予約する
 - 帯 (バンド) とビュー「パス運用」: 初めて create したときに作る
 
@@ -63,8 +65,8 @@ def save_item(args, **item):
     return request(args, f"/timeline/{args.instance}/items", {"source": "rdb", **item})
 
 
-def script_activity(script_args):
-    return {"type": "SCRIPT", "args": {"script": "set_links.py", "args": script_args, "processor": "realtime"}}
+def script_activity(script_args, script="set_links.py"):
+    return {"type": "SCRIPT", "args": {"script": script, "args": script_args, "processor": "realtime"}}
 
 
 # --- 帯とビュー ---------------------------------------------------------------
@@ -151,10 +153,16 @@ def create(args):
                              autoStart=True, activityDefinition=script_activity("enable"),
                              properties={"backgroundColor": LINK_COLOR})
         # AOS (テレメトリが届き始めた) が成功したら、手順を始める
-        save_item(args, type="ACTIVITY", name=f"通信の確認 {n}", duration="20s", tags=["procedure"], autoStart=True,
-                  activityDefinition={"type": "STACK", "args": {"bucket": "stacks", "stack": "01-link-check.ycs",
-                                                                "processor": "realtime"}},
-                  predecessors=[{"itemId": aos_item["id"], "startCondition": "ON_SUCCESS"}])
+        check_item = save_item(args, type="ACTIVITY", name=f"通信の確認 {n}", duration="20s", tags=["procedure"],
+                               autoStart=True,
+                               activityDefinition={"type": "STACK", "args": {"bucket": "stacks",
+                                                                             "stack": "01-link-check.ycs",
+                                                                             "processor": "realtime"}},
+                               predecessors=[{"itemId": aos_item["id"], "startCondition": "ON_SUCCESS"}])
+        # 通信が確かめられたら、パスの外の間に記録したデータを降ろす (#56)
+        save_item(args, type="ACTIVITY", name=f"ダンプ {n}", duration="60s", tags=["procedure"], autoStart=True,
+                  activityDefinition=script_activity("", "dump_recorder.py"),
+                  predecessors=[{"itemId": check_item["id"], "startCondition": "ON_SUCCESS"}])
         save_item(args, type="ACTIVITY", name=f"LOS {n}", start=iso(los), duration="5s", tags=["link"],
                   autoStart=True, activityDefinition=script_activity("disable"),
                   properties={"backgroundColor": LINK_COLOR})

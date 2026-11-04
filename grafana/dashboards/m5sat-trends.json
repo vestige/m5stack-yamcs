@@ -631,7 +631,7 @@
         "type": "yamcs-yamcs-datasource",
         "uid": "yamcs"
       },
-      "description": "時間帯ごとの値。灰色の空白は、テレメトリが届いていない時間 (衛星が止まっていた、パスの外など)",
+      "description": "時間帯ごとの値。灰色の空白は、テレメトリが届いていない時間 (衛星が止まっていた、パスの外など)。ダンプの段が DUMPING のところが、パスでデータレコーダを降ろしていた時間",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -685,6 +685,30 @@
                   "color": "#73BF69",
                   "index": 3,
                   "text": "ON"
+                },
+                "RECORDING": {
+                  "color": "#73BF69",
+                  "index": 8
+                },
+                "WAITING_TIME": {
+                  "color": "#FADE2A",
+                  "index": 9
+                },
+                "NO_CARD": {
+                  "color": "#F2495C",
+                  "index": 10
+                },
+                "ERROR": {
+                  "color": "#F2495C",
+                  "index": 11
+                },
+                "IDLE": {
+                  "color": "#8E8E8E",
+                  "index": 12
+                },
+                "DUMPING": {
+                  "color": "#5794F2",
+                  "index": 13
                 }
               },
               "type": "value"
@@ -736,11 +760,35 @@
                 "value": "観測の状態"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "記録"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "E"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ダンプ"
+              }
+            ]
           }
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 24,
         "x": 0,
         "y": 14
@@ -790,9 +838,27 @@
           "parameter": "/M5Sat/Bus/ObservationState",
           "queryType": "ParameterRanges",
           "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/RecorderState",
+          "queryType": "ParameterRanges",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/DumpState",
+          "queryType": "ParameterRanges",
+          "refId": "E"
         }
       ],
-      "title": "運用モード・ペイロード電源・観測の状態",
+      "title": "運用モード・ペイロード電源・観測・記録・ダンプの状態",
       "type": "state-timeline"
     },
     {
@@ -801,11 +867,276 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 22
+      },
+      "id": 21,
+      "title": "データレコーダ（記録とダンプ）",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "パスの外では記録がたまって増え、パスでダンプして CLEAR_RECORDER で消すと下がる (のこぎりの形)。下がらずに増え続けていたら、パスの時間が足りずに降ろしきれていない",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "kbytes",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "bus (HK・ACK・イベント)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "gnss (GNSS・観測データ)"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/RecorderBusPendingKB",
+          "queryType": "ParameterSamples",
+          "refId": "A",
+          "stats": [
+            "MAX"
+          ]
+        },
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/RecorderGnssPendingKB",
+          "queryType": "ParameterSamples",
+          "refId": "B",
+          "stats": [
+            "MAX"
+          ]
+        }
+      ],
+      "title": "まだ降ろしたと確かめていない量",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yamcs-yamcs-datasource",
+        "uid": "yamcs"
+      },
+      "description": "ダンプを始めると降ろす量から始まり、送るにつれて 0 に下がる。傾きが降ろす速さ (約 4KB/秒)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "kbytes",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "残り"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "yamcs-yamcs-datasource",
+            "uid": "yamcs"
+          },
+          "parameter": "/M5Sat/Bus/DumpRemainingKB",
+          "queryType": "ParameterSamples",
+          "refId": "A",
+          "stats": [
+            "MAX"
+          ]
+        }
+      ],
+      "title": "ダンプの残り",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
       },
       "id": 19,
       "title": "傾向（期間ごとの平均・最小・最大）",
-      "type": "row"
+      "type": "row",
+      "description": "パスの外で抜けていた時間は、ダンプで降ろすと後から埋まる (ダンプが終わって10〜20秒ほどで、パラメータの履歴が作り直される)"
     },
     {
       "datasource": {
@@ -872,7 +1203,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 32
       },
       "id": 9,
       "options": {
@@ -973,7 +1304,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 32
       },
       "id": 10,
       "options": {
@@ -1083,7 +1414,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 40
       },
       "id": 11,
       "options": {
@@ -1194,7 +1525,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 29
+        "y": 40
       },
       "id": 12,
       "options": {
@@ -1235,7 +1566,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 48
       },
       "id": 20,
       "title": "イベント",
@@ -1292,7 +1623,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 49
       },
       "id": 14,
       "options": {
