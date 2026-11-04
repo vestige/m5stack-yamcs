@@ -41,6 +41,10 @@ static const int PAYLOAD_LED_PIN = 26;
 
 static const uint32_t DISPLAY_INTERVAL_MS = 1000;
 static const uint32_t LINK_SWITCH_HOLD_MS = 2000;
+// ダンプの速さ: 100ms ごとに 400 バイトずつ (約 4KB/秒)。リアルタイムのテレメトリと合わせても、
+// ESP-NOW の地上局からパソコンへのシリアル (115200bps、約 11KB/秒) に収まる速さにする
+static const uint32_t DUMP_INTERVAL_MS = 100;
+static const size_t DUMP_BYTES_PER_STEP = 400;
 
 Satellite satellite;
 GnssReceiver gnss;
@@ -50,13 +54,14 @@ LinkSetting::Link activeLink;
 GroundLink groundLink;
 TrainingFaults training;
 DataRecorder recorder;
-CommandHandler commands(satellite, groundLink, training);
+CommandHandler commands(satellite, groundLink, training, recorder);
 BusMonitor bus;
 TelemetryDisplay display;
 PayloadLed payloadLed(PAYLOAD_LED_PIN);
 
 IntervalTimer telemetryTimer;
 IntervalTimer displayTimer;
+IntervalTimer dumpTimer;
 
 // パケットの副ヘッダに入れる機上時刻 (Unix 時刻のミリ秒。GPS の時刻で合わせるまでは0)
 uint64_t onboardTimeMs() { return satellite.clock().nowMillis(millis()); }
@@ -68,6 +73,14 @@ void sendTelemetry() {
   hk.recorderState = static_cast<uint8_t>(recorder.state());
   hk.recorderFreeMB = recorder.freeMB();
   hk.recorderRecords = recorder.records();
+  hk.recorderBusPendingKB = recorder.pendingKB(RecordFormat::Source::Bus);
+  hk.recorderGnssPendingKB = recorder.pendingKB(RecordFormat::Source::Gnss);
+  hk.dumpState = recorder.dumping() ? 1 : 0;
+  hk.dumpSource = recorder.dumpSource();
+  hk.dumpSent = recorder.dumpSent();
+  hk.dumpRemainingKB = recorder.dumpRemainingKB();
+  hk.recorderBusReleased = recorder.releasedSec(RecordFormat::Source::Bus);
+  hk.recorderGnssReleased = recorder.releasedSec(RecordFormat::Source::Gnss);
   groundLink.sendHousekeeping(hk);
   if (satellite.payloadPower()) groundLink.sendGnss(gnss.parser());
   if (satellite.payloadPower() && satellite.mode() == Satellite::OperationMode::Mission) {
@@ -96,6 +109,22 @@ void reportRecorderState() {
   event.id = EventPacket::EventId::RecorderStateChanged;
   event.arg1 = static_cast<uint16_t>(state);
   event.arg2 = recorder.freeMB();
+  satellite.report(event);
+}
+
+// ダンプ: 記録を少しずつ読んで送る。終わったらイベントで知らせる (送った数を、地上が受け取った数と比べる)
+void sendDump() {
+  recorder.dumpStep(DUMP_BYTES_PER_STEP,
+                    [](const uint8_t* packet, size_t size) { groundLink.sendDump(packet, size); });
+  DataRecorder::DumpEnd end;
+  uint32_t sent;
+  if (!recorder.takeDumpEnd(&end, &sent)) return;
+  EventPacket::Event event;
+  event.severity = end == DataRecorder::DumpEnd::CardError ? EventPacket::Severity::Warning
+                                                            : EventPacket::Severity::Info;
+  event.id = EventPacket::EventId::DumpEnded;
+  event.arg1 = static_cast<uint16_t>(end);
+  event.arg2 = sent > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(sent);
   satellite.report(event);
 }
 
@@ -191,6 +220,7 @@ void loop() {
 
   uint32_t now = millis();
   if (telemetryTimer.elapsed(now, satellite.tmIntervalMs())) sendTelemetry();
+  if (dumpTimer.elapsed(now, DUMP_INTERVAL_MS)) sendDump();
   if (displayTimer.elapsed(now, DISPLAY_INTERVAL_MS)) {
     gnss.printTelemetry();
     refreshDisplay(now);

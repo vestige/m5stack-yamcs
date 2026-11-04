@@ -49,11 +49,16 @@ uint64_t packetTimeMs(const uint8_t* packet, size_t size) {
 }
 
 void filePath(Source source, uint32_t utcSec, char* out, size_t size) {
+  char key[kHourKeyLength];
+  hourKey(utcSec, key, sizeof(key));
+  snprintf(out, size, "/rec/%s/%s.bin", sourceName(source), key);
+}
+
+void hourKey(uint32_t utcSec, char* out, size_t size) {
   time_t t = static_cast<time_t>(utcSec);
   struct tm tm;
   gmtime_r(&t, &tm);
-  snprintf(out, size, "/rec/%s/%04d%02d%02d/%02d.bin", sourceName(source), tm.tm_year + 1900, tm.tm_mon + 1,
-           tm.tm_mday, tm.tm_hour);
+  snprintf(out, size, "%04d%02d%02d/%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour);
 }
 
 void sourceDir(Source source, char* out, size_t size) { snprintf(out, size, "/rec/%s", sourceName(source)); }

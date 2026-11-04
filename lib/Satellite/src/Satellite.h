@@ -41,12 +41,22 @@ class Satellite {
   static const uint16_t kSkippedPayloadOff = 1;
   static const uint16_t kSkippedNotNominal = 2;
 
+  // データレコーダへの指示。データレコーダ (microSD) は Satellite の外にあるので、受理したら呼び出し側が実行する
+  struct RecorderRequest {
+    enum class Kind : uint8_t { None, Dump, StopDump, Clear };
+    Kind kind = Kind::None;
+    Telecommand::RecorderSource source = Telecommand::RecorderSource::All;
+    uint32_t startSec = 0;  // Dump: 0=まだ消していない分の始めから
+    uint32_t endSec = 0;    // Dump: 0=今 / Clear: この時刻より前を消す
+  };
+
   // コマンドを処理した結果
   struct Result {
     bool accepted = false;
     Telecommand::ErrorCode error = Telecommand::ErrorCode::None;
     // BEEPを受理したとき、鳴らす長さ (ms)。0なら鳴らさない
     uint16_t beepMs = 0;
+    RecorderRequest recorder;
   };
 
   // コマンドを検査し、受理できれば実行する。受理数・拒否数もここで数える。

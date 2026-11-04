@@ -183,6 +183,27 @@
 				<IntegerParameterType name="Record_Count_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="32" />
 				</IntegerParameterType>
+				<IntegerParameterType name="Kilobytes_Type" signed="false">
+					<UnitSet>
+						<Unit>KB</Unit>
+					</UnitSet>
+					<IntegerDataEncoding sizeInBits="32" />
+				</IntegerParameterType>
+				<EnumeratedParameterType name="Dump_State_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="IDLE" />
+						<Enumeration value="1" label="DUMPING" />
+					</EnumerationList>
+				</EnumeratedParameterType>
+				<EnumeratedParameterType name="Recorder_Source_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="BUS" />
+						<Enumeration value="1" label="GNSS" />
+						<Enumeration value="2" label="ALL" />
+					</EnumerationList>
+				</EnumeratedParameterType>
 				<IntegerParameterType name="Observation_Count_Type" signed="false">
 					<IntegerDataEncoding sizeInBits="16" />
 				</IntegerParameterType>
@@ -212,6 +233,9 @@
 						<Enumeration value="8" label="SCHEDULE_OBSERVATION" />
 						<Enumeration value="9" label="CANCEL_OBSERVATION" />
 						<Enumeration value="10" label="SET_LAMP" />
+						<Enumeration value="11" label="DUMP_RECORDER" />
+						<Enumeration value="12" label="STOP_DUMP" />
+						<Enumeration value="13" label="CLEAR_RECORDER" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Tc_Sequence_Type" signed="false">
@@ -256,6 +280,9 @@
 						<Enumeration value="14" label="LAMP_ON" />
 						<Enumeration value="15" label="LAMP_OFF" />
 						<Enumeration value="16" label="RECORDER_STATE_CHANGED" />
+						<Enumeration value="17" label="DUMP_STARTED" />
+						<Enumeration value="18" label="DUMP_ENDED" />
+						<Enumeration value="19" label="RECORDER_CLEARED" />
 					</EnumerationList>
 				</EnumeratedParameterType>
 				<IntegerParameterType name="Event_Arg_Type" signed="false">
@@ -341,6 +368,14 @@
 				<Parameter name="RecorderState" parameterTypeRef="Recorder_State_Type" shortDescription="データレコーダ (microSD) の状態" />
 				<Parameter name="RecorderFreeMB" parameterTypeRef="Megabytes_Type" shortDescription="データレコーダ (microSD) の空き" />
 				<Parameter name="RecorderRecords" parameterTypeRef="Record_Count_Type" shortDescription="起動してからデータレコーダに記録したパケットの数" />
+				<Parameter name="RecorderBusPendingKB" parameterTypeRef="Kilobytes_Type" shortDescription="bus の記録のうち、まだ消していない (降ろせたと確かめていない) 量" />
+				<Parameter name="RecorderGnssPendingKB" parameterTypeRef="Kilobytes_Type" shortDescription="gnss の記録のうち、まだ消していない (降ろせたと確かめていない) 量" />
+				<Parameter name="DumpState" parameterTypeRef="Dump_State_Type" shortDescription="ダンプ (記録を降ろす) の状態" />
+				<Parameter name="DumpSource" parameterTypeRef="Recorder_Source_Type" shortDescription="ダンプしている (最後にダンプした) 機器" />
+				<Parameter name="DumpSent" parameterTypeRef="Record_Count_Type" shortDescription="いまの (最後の) ダンプで送ったパケットの数" />
+				<Parameter name="DumpRemainingKB" parameterTypeRef="Kilobytes_Type" shortDescription="いまのダンプで、まだ読んでいない量" />
+				<Parameter name="RecorderBusReleased" parameterTypeRef="Unix_Time_Type" shortDescription="bus の解放の印: この時刻より前は、地上が降ろし終えたと確かめた (まだ一度も消していなければ1970-01-01)" />
+				<Parameter name="RecorderGnssReleased" parameterTypeRef="Unix_Time_Type" shortDescription="gnss の解放の印 (同じ)" />
 				<Parameter name="AckTcSequence" parameterTypeRef="Tc_Sequence_Type" shortDescription="ACK: どのTC (シーケンス番号) への応答か" />
 				<Parameter name="AckCommandId" parameterTypeRef="Command_Id_Type" shortDescription="ACK: コマンド" />
 				<Parameter name="AckStage" parameterTypeRef="Ack_Stage_Type" shortDescription="ACK: 受理・拒否・実行完了・実行失敗" />
@@ -385,6 +420,14 @@
 						<ParameterRefEntry parameterRef="RecorderState" />
 						<ParameterRefEntry parameterRef="RecorderFreeMB" />
 						<ParameterRefEntry parameterRef="RecorderRecords" />
+						<ParameterRefEntry parameterRef="RecorderBusPendingKB" />
+						<ParameterRefEntry parameterRef="RecorderGnssPendingKB" />
+						<ParameterRefEntry parameterRef="DumpState" />
+						<ParameterRefEntry parameterRef="DumpSource" />
+						<ParameterRefEntry parameterRef="DumpSent" />
+						<ParameterRefEntry parameterRef="DumpRemainingKB" />
+						<ParameterRefEntry parameterRef="RecorderBusReleased" />
+						<ParameterRefEntry parameterRef="RecorderGnssReleased" />
 					</EntryList>
 					<BaseContainer containerRef="/M5Sat/CCSDSPacket">
 						<RestrictionCriteria>
@@ -436,16 +479,23 @@
 			<AlgorithmSet>
 				<!--
 				  衛星はイベントの番号と数値だけを送ってくるので、ここで文章にして YAMCS の Events に出す。
-				  過去データの再生で同じイベントが重複しないよう、リアルタイムのプロセッサのときだけ出す。
+				  過去データの再生で同じイベントが重複しないよう、リアルタイムとダンプのプロセッサのときだけ出す。
+				  イベントの時刻は、衛星で起きた時刻 (パケットの機上時刻) にする。
+				  ダンプで届いたイベント (#56) は、送り元 M5Sat/dump として出す。リアルタイムで受け取り済みのイベントは、
+				  tools/udp_receiver.py がダンプのリンクに送らないので、ここには来ない (Events に2つ出ない)。
 				-->
 				<CustomAlgorithm name="SatelliteEventMessage">
 					<AlgorithmText language="JavaScript"><![CDATA[
-if (Yamcs.processorName() != "realtime") return;
+var processor = Yamcs.processorName();
+if (processor != "realtime" && processor != "dump") return;
 
 var MODE = ["SAFE", "NOMINAL", "MISSION"];
 var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP", "SET_FDIR",
-               "SCHEDULE_OBSERVATION", "CANCEL_OBSERVATION", "SET_LAMP"];
+               "SCHEDULE_OBSERVATION", "CANCEL_OBSERVATION", "SET_LAMP", "DUMP_RECORDER", "STOP_DUMP",
+               "CLEAR_RECORDER"];
 var LAMP = ["OFF", "RED", "GREEN", "BLUE", "YELLOW", "CYAN", "MAGENTA", "WHITE"];
+var RECORDER_SOURCE = ["bus", "gnss", "全部の機器"];
+var DUMP_END = ["降ろし終えました", "コマンドで止めました", "microSD が読めないので中断しました"];
 var RECORDER_STATE = ["microSD がありません", "記録しています", "機上時刻がわからないので、まだ記録していません", "書き込みに失敗しました"];
 var LAMP_OFF_REASON = ["コマンドで消しました", "点灯時間が過ぎました", "SAFE になったので消しました",
                        "ペイロードの電源が切れたので消しました"];
@@ -504,6 +554,15 @@ switch (eventId.value) {
   case "RECORDER_STATE_CHANGED":
     message = "データレコーダ: " + name(RECORDER_STATE, a1) + " (空き " + a2 + "MB)";
     break;
+  case "DUMP_STARTED":
+    message = "ダンプを始めました (" + name(RECORDER_SOURCE, a1) + ", " + a2 + "KB)";
+    break;
+  case "DUMP_ENDED":
+    message = "ダンプ: " + name(DUMP_END, a1) + " (送ったパケット " + a2 + ")";
+    break;
+  case "RECORDER_CLEARED":
+    message = "降ろし終えた記録を消しました (" + name(RECORDER_SOURCE, a1) + ", " + a2 + "ファイル)";
+    break;
   case "LAMP_ON":
     message = "ランプを " + name(LAMP, a1) + " で点けました (" + a2 + "秒間)";
     break;
@@ -514,15 +573,15 @@ switch (eventId.value) {
     message = "不明なイベント (" + eventId.rawValue + ", " + a1 + ", " + a2 + ")";
 }
 
-var source = "M5Sat";
-var type = String(eventId.value);
+var event = {source: processor == "dump" ? "M5Sat/dump" : "M5Sat", type: String(eventId.value), message: message};
+if (Number(packetTime.rawValue) > 0) event.time = new Date(Number(packetTime.rawValue)).toISOString();
 switch (severity.value) {
-  case "WATCH": EventLog.watch(source, type, message); break;
-  case "WARNING": EventLog.warning(source, type, message); break;
-  case "DISTRESS": EventLog.distress(source, type, message); break;
-  case "CRITICAL": EventLog.critical(source, type, message); break;
-  case "SEVERE": EventLog.severe(source, type, message); break;
-  default: EventLog.info(source, type, message);
+  case "WATCH": EventLog.watch(event); break;
+  case "WARNING": EventLog.warning(event); break;
+  case "DISTRESS": EventLog.distress(event); break;
+  case "CRITICAL": EventLog.critical(event); break;
+  case "SEVERE": EventLog.severe(event); break;
+  default: EventLog.info(event);
 }
 ]]></AlgorithmText>
 					<InputSet>
@@ -530,6 +589,7 @@ switch (severity.value) {
 						<InputParameterInstanceRef parameterRef="EventId" inputName="eventId" />
 						<InputParameterInstanceRef parameterRef="EventArg1" inputName="arg1" />
 						<InputParameterInstanceRef parameterRef="EventArg2" inputName="arg2" />
+						<InputParameterInstanceRef parameterRef="/M5Sat/PacketTime" inputName="packetTime" />
 					</InputSet>
 					<TriggerSet>
 						<OnParameterUpdateTrigger parameterRef="EventId" />
@@ -608,6 +668,14 @@ switch (severity.value) {
 						<ValidRange minInclusive="0" maxInclusive="600" />
 					</ValidRangeSet>
 				</IntegerArgumentType>
+				<EnumeratedArgumentType name="Recorder_Source_Arg_Type">
+					<IntegerDataEncoding sizeInBits="8" />
+					<EnumerationList>
+						<Enumeration value="0" label="BUS" />
+						<Enumeration value="1" label="GNSS" />
+						<Enumeration value="2" label="ALL" />
+					</EnumerationList>
+				</EnumeratedArgumentType>
 				<IntegerArgumentType name="Beep_Duration_Arg_Type" signed="false">
 					<UnitSet>
 						<Unit>ms</Unit>
@@ -912,6 +980,62 @@ switch (severity.value) {
 						</TransmissionConstraint>
 					</TransmissionConstraintList>
 					<DefaultSignificance consequenceLevel="critical" reasonForWarning="ミッション要求により、ペイロード (ランプ) を操作します" />
+				</MetaCommand>
+
+				<!--
+				  データレコーダ (#56)。パスの間に記録を降ろし (ダンプ)、降ろせたと確かめてから消す。
+				  時刻の 1970-01-01T00:00:00Z (0) は、開始なら「まだ消していない分の始めから」、終わりなら「今」
+				-->
+				<MetaCommand name="DUMP_RECORDER" shortDescription="データレコーダの記録を降ろす (ダンプ)。開始・終わりの 1970-01-01T00:00:00Z は「まだ消していない分の始めから」「今まで」">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="11" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="Source" argumentTypeRef="Recorder_Source_Arg_Type" initialValue="ALL" />
+						<Argument name="Start" argumentTypeRef="Unix_Time_Arg_Type" initialValue="1970-01-01T00:00:00Z" />
+						<Argument name="End" argumentTypeRef="Unix_Time_Arg_Type" initialValue="1970-01-01T00:00:00Z" />
+					</ArgumentList>
+					<CommandContainer name="DUMP_RECORDER">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="Source" />
+							<ArgumentRefEntry argumentRef="Start" />
+							<ArgumentRefEntry argumentRef="End" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+				<MetaCommand name="STOP_DUMP" shortDescription="ダンプを途中で止める">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="12" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<CommandContainer name="STOP_DUMP">
+						<EntryList />
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+				</MetaCommand>
+				<MetaCommand name="CLEAR_RECORDER" shortDescription="降ろせたと確かめた記録 (Before より前) を消す。消すのは Before より前に終わった1時間分のファイル">
+					<BaseMetaCommand metaCommandRef="M5SatCommand">
+						<ArgumentAssignmentList>
+							<ArgumentAssignment argumentName="CommandId" argumentValue="13" />
+						</ArgumentAssignmentList>
+					</BaseMetaCommand>
+					<ArgumentList>
+						<Argument name="Source" argumentTypeRef="Recorder_Source_Arg_Type" initialValue="ALL" />
+						<Argument name="Before" argumentTypeRef="Unix_Time_Arg_Type" />
+					</ArgumentList>
+					<CommandContainer name="CLEAR_RECORDER">
+						<EntryList>
+							<ArgumentRefEntry argumentRef="Source" />
+							<ArgumentRefEntry argumentRef="Before" />
+						</EntryList>
+						<BaseContainer containerRef="M5SatCommand" />
+					</CommandContainer>
+					<!-- 消した記録は戻らない。ただし、パスの手順で自動で送れるよう、承認 (critical) にはしない -->
+					<DefaultSignificance consequenceLevel="warning" reasonForWarning="衛星の記録を消します。降ろせたことを確かめてから送ってください" />
 				</MetaCommand>
 			</MetaCommandSet>
 		</CommandMetaData>

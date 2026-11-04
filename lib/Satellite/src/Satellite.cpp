@@ -25,6 +25,9 @@ int argsLengthOf(uint8_t commandId) {
     case CommandId::ScheduleObservation: return 6;
     case CommandId::CancelObservation: return 0;
     case CommandId::SetLamp: return 3;
+    case CommandId::DumpRecorder: return 9;
+    case CommandId::StopDump: return 0;
+    case CommandId::ClearRecorder: return 5;
   }
   return -1;
 }
@@ -111,6 +114,17 @@ ErrorCode Satellite::validate(const Telecommand::Packet& tc) const {
       if (!payloadPower_) return ErrorCode::NotAllowed;
       return ErrorCode::None;
     }
+    case CommandId::DumpRecorder: {
+      if (tc.args[0] > static_cast<uint8_t>(Telecommand::RecorderSource::All)) return ErrorCode::InvalidArgument;
+      uint32_t start = readU32(tc.args + 1);
+      uint32_t end = readU32(tc.args + 5);
+      if (end != 0 && start >= end) return ErrorCode::InvalidArgument;
+      return ErrorCode::None;
+    }
+    case CommandId::ClearRecorder:
+      if (tc.args[0] > static_cast<uint8_t>(Telecommand::RecorderSource::All)) return ErrorCode::InvalidArgument;
+      if (readU32(tc.args + 1) == 0) return ErrorCode::InvalidArgument;
+      return ErrorCode::None;
     default:
       return ErrorCode::None;
   }
@@ -174,6 +188,20 @@ void Satellite::execute(const Telecommand::Packet& tc, Result* result) {
       reportInfo(EventId::LampOn, static_cast<uint16_t>(color), duration);
       break;
     }
+    case CommandId::DumpRecorder:
+      result->recorder.kind = RecorderRequest::Kind::Dump;
+      result->recorder.source = static_cast<Telecommand::RecorderSource>(tc.args[0]);
+      result->recorder.startSec = readU32(tc.args + 1);
+      result->recorder.endSec = readU32(tc.args + 5);
+      break;
+    case CommandId::StopDump:
+      result->recorder.kind = RecorderRequest::Kind::StopDump;
+      break;
+    case CommandId::ClearRecorder:
+      result->recorder.kind = RecorderRequest::Kind::Clear;
+      result->recorder.source = static_cast<Telecommand::RecorderSource>(tc.args[0]);
+      result->recorder.endSec = readU32(tc.args + 1);
+      break;
     case CommandId::CancelObservation: {
       bool wasActive = observationState_ == ObservationState::Active;
       uint32_t now = clock_.now(nowMs_);

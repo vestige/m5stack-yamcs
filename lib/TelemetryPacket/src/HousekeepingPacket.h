@@ -37,10 +37,18 @@
 //     66    1  uint8   recorder state (0=NO_CARD, 1=RECORDING, 2=WAITING_TIME, 3=ERROR)
 //     67    2  uint16  recorder free (MB。microSD の空き)
 //     69    4  uint32  recorder records (起動してから記録したパケットの数)
+//     73    4  uint32  recorder bus pending (KB。bus の記録のうち、まだ消していない (降ろしたと確かめていない) 量)
+//     77    4  uint32  recorder gnss pending (KB。gnss の同じ量)
+//     81    1  uint8   dump state (0=IDLE, 1=DUMPING)
+//     82    1  uint8   dump source (0=bus, 1=gnss, 2=全部)
+//     83    4  uint32  dump sent (いまの、または最後のダンプで送ったパケットの数)
+//     87    4  uint32  dump remaining (KB。いまのダンプで、まだ読んでいない量)
+//     91    4  uint32  recorder bus released (Unix秒。bus の解放の印: この時刻より前は降ろし終えた。まだ一度も消していなければ0)
+//     95    4  uint32  recorder gnss released (Unix秒。gnss の同じ印)
 namespace HousekeepingPacket {
 
 const uint16_t kApid = 101;
-const size_t kPacketSize = 73;
+const size_t kPacketSize = 99;
 
 enum class OperationMode : uint8_t { Safe = 0, Nominal = 1, Mission = 2 };
 
@@ -92,6 +100,14 @@ struct Housekeeping {
   uint8_t recorderState = 0;
   uint16_t recorderFreeMB = 0;
   uint32_t recorderRecords = 0;
+  uint32_t recorderBusPendingKB = 0;
+  uint32_t recorderGnssPendingKB = 0;
+  uint8_t dumpState = 0;
+  uint8_t dumpSource = 0;
+  uint32_t dumpSent = 0;
+  uint32_t dumpRemainingKB = 0;
+  uint32_t recorderBusReleased = 0;
+  uint32_t recorderGnssReleased = 0;
 };
 
 // パケットをbufferに書き込み、書き込んだバイト数を返す。bufferが小さければ0を返す。

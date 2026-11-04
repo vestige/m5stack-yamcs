@@ -9,6 +9,10 @@ LOG_DIR="$ROOT_DIR/logs"
 RECEIVER_PORT=10015
 # YAMCSのUDPデータリンクのポート (yamcs/src/main/yamcs/etc/yamcs.gnss.yaml)
 YAMCS_TM_PORT=10016
+# ダンプ (データレコーダから降ろしたパケット) を受ける YAMCS のデータリンクのポート (#56)
+YAMCS_DUMP_PORT=10017
+# 受信スクリプトが、ダンプで受け取った数を書くファイル。YAMCS の手順 dump_recorder.py が、降ろせたかの確認に読む
+DUMP_STATS_FILE="$RUN_DIR/dump_stats.json"
 # YAMCSがTCを送るポート。受信スクリプトが受け取って衛星へ中継する (yamcs.gnss.yaml)
 UPLINK_PORT=10025
 YAMCS_URL="http://localhost:8090"

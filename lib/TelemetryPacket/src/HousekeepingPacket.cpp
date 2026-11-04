@@ -38,6 +38,14 @@ size_t encode(const Housekeeping& hk, uint16_t sequenceCount, uint64_t timeMs, u
   w.u8(hk.recorderState);
   w.u16(hk.recorderFreeMB);
   w.u32(hk.recorderRecords);
+  w.u32(hk.recorderBusPendingKB);
+  w.u32(hk.recorderGnssPendingKB);
+  w.u8(hk.dumpState);
+  w.u8(hk.dumpSource);
+  w.u32(hk.dumpSent);
+  w.u32(hk.dumpRemainingKB);
+  w.u32(hk.recorderBusReleased);
+  w.u32(hk.recorderGnssReleased);
 
   return kPacketSize;
 }

@@ -7,6 +7,8 @@
     python3 tools/udp_receiver.py --forward 127.0.0.1:10016   # YAMCSへ中継する
     python3 tools/udp_receiver.py --forward 127.0.0.1:10016 --uplink-port 10025
         # さらに、YAMCSから 127.0.0.1:10025 に届いたTCを衛星へ中継する
+    python3 tools/udp_receiver.py --forward 127.0.0.1:10016 --dump-forward 127.0.0.1:10017
+        # ダンプ (APID 105) は中のパケットを取り出し、YAMCS のダンプ用のリンクへ送る
 
 TCは、直近にTMを送ってきた衛星のIPアドレスへ送る。TMが届いていない (衛星が見えていない) 間は送れない。
 
@@ -16,18 +18,22 @@ TCは、直近にTMを送ってきた衛星のIPアドレスへ送る。TMが届
     APID 102 ACK            lib/TelemetryPacket/src/AckPacket.h
     APID 103 イベント        lib/TelemetryPacket/src/EventPacket.h
     APID 104 観測データ      lib/TelemetryPacket/src/ObservationPacket.h
+    APID 105 ダンプ          lib/TelemetryPacket/src/DumpPacket.h (データレコーダの記録を中に入れたもの)
     APID 110 TC             lib/Satellite/src/Telecommand.h
     APID 111 訓練用の異常    lib/Satellite/src/TrainingFault.h (出題者が tools/inject_fault.py で送る)
 """
 
 import argparse
 import datetime
+import json
 import os
 import select
 import socket
 import struct
 import termios
 import time
+import urllib.parse
+import urllib.request
 
 PRIMARY_HEADER = struct.Struct(">HHH")
 # TM の副ヘッダ: 機上時刻 (Unix 時刻のミリ秒、わからなければ0)。TM はすべて持つ (#54)
@@ -38,6 +44,7 @@ APID_HOUSEKEEPING = 101
 APID_ACK = 102
 APID_EVENT = 103
 APID_OBSERVATION = 104
+APID_DUMP = 105  # データレコーダから降ろしたパケット。中に記録したパケットがそのまま入っている
 APID_TELECOMMAND = 110
 APID_TRAINING = 111  # 訓練用の異常 (tools/inject_fault.py)。YAMCS を通らない
 
@@ -46,8 +53,9 @@ GNSS_PAYLOAD = struct.Struct(">IHddfBBBBIII")
 # mode, payloadPower, accepted, rejected, lastCommand, rssi, freeHeap, minFreeHeap, uptime, bootCount, resetReason,
 # fdirEnabled, lastFault, faultCount, onboardTime, observationState, observationStart, observationDuration,
 # lastObservationResult, lastObservationStart, lastObservationLength, completedObservations, lampColor, lampRemaining,
-# payloadOnTime, recorderState, recorderFreeMB, recorderRecords
-HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHHBHHBHI")
+# payloadOnTime, recorderState, recorderFreeMB, recorderRecords, recorderBusPendingKB, recorderGnssPendingKB,
+# dumpState, dumpSource, dumpSent, dumpRemainingKB
+HOUSEKEEPING_PAYLOAD = struct.Struct(">BBHHBbIIIHBBBHIBIHBIHHBHHBHIIIBBIIII")
 # tcSequence, commandId, stage, errorCode
 ACK_PAYLOAD = struct.Struct(">HBBB")
 # severity, eventId, arg1, arg2
@@ -59,6 +67,8 @@ OBSERVATION_ENTRY = struct.Struct(">BBbHB")
 GNSS_SYSTEM = {0: "G", 1: "R", 2: "E", 3: "C", 4: "J", 5: "I"}
 OBSERVATION_STATE = {0: "NONE", 1: "SCHEDULED", 2: "ACTIVE"}
 RECORDER_STATE = {0: "NO_CARD", 1: "RECORDING", 2: "WAITING_TIME", 3: "ERROR"}
+RECORDER_SOURCE = {0: "bus", 1: "gnss", 2: "all"}
+DUMP_END = {0: "completed", 1: "stopped", 2: "card error"}
 LAMP_COLOR = {0: "OFF", 1: "RED", 2: "GREEN", 3: "BLUE", 4: "YELLOW", 5: "CYAN", 6: "MAGENTA", 7: "WHITE"}
 OBSERVATION_RESULT = {0: "NONE", 1: "COMPLETED", 2: "ABORTED", 3: "SKIPPED_PAYLOAD_OFF",
                       4: "SKIPPED_NOT_NOMINAL", 5: "CANCELLED"}
@@ -83,6 +93,9 @@ COMMAND = {
     8: "SCHEDULE_OBSERVATION",
     9: "CANCEL_OBSERVATION",
     10: "SET_LAMP",
+    11: "DUMP_RECORDER",
+    12: "STOP_DUMP",
+    13: "CLEAR_RECORDER",
 }
 FAULT = {0: "NONE", 1: "GNSS_NO_DATA"}
 ACK_STAGE = {1: "ACCEPTED", 2: "REJECTED", 3: "COMPLETED", 4: "FAILED"}
@@ -112,6 +125,9 @@ EVENT_ID = {
     14: "LAMP_ON",
     15: "LAMP_OFF",
     16: "RECORDER_STATE_CHANGED",
+    17: "DUMP_STARTED",
+    18: "DUMP_ENDED",
+    19: "RECORDER_CLEARED",
 }
 # ESP-IDF の esp_reset_reason_t
 RESET_REASON = {
@@ -150,6 +166,18 @@ def decode_header(data):
             raise ValueError(f"packet too short for secondary header: {len(data)} bytes")
         (header["time_ms"],) = SECONDARY_HEADER.unpack_from(data, PRIMARY_HEADER.size)
     return header
+
+
+def with_reception_time(data):
+    """機上時刻がまだわからない (0) TM に、受け取った時刻を入れる。
+    YAMCS のリアルタイムのリンクは機上時刻でアーカイブするので、0 のままだと 1970 年に入ってしまう"""
+    word1 = PRIMARY_HEADER.unpack_from(data)[0]
+    if not (word1 >> 11) & 1 or len(data) < PRIMARY_HEADER.size + SECONDARY_HEADER.size:
+        return data
+    if SECONDARY_HEADER.unpack_from(data, PRIMARY_HEADER.size)[0] != 0:
+        return data
+    now_ms = int(time.time() * 1000)
+    return data[:PRIMARY_HEADER.size] + SECONDARY_HEADER.pack(now_ms) + data[PRIMARY_HEADER.size + SECONDARY_HEADER.size:]
 
 
 def payload_offset(data):
@@ -198,7 +226,8 @@ def format_housekeeping(data):
     (mode, payload, accepted, rejected, last_command, rssi, free_heap, min_free_heap, uptime, boot_count,
      reset_reason, fdir, last_fault, fault_count, onboard_time, obs_state, obs_start,
      obs_duration, last_result, last_start, last_length, completed, lamp_color,
-     lamp_remaining, payload_on_time, rec_state, rec_free, rec_records) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
+     lamp_remaining, payload_on_time, rec_state, rec_free, rec_records, bus_pending, gnss_pending, dump_state,
+     dump_source, dump_sent, dump_remaining, bus_released, gnss_released) = unpack_payload(HOUSEKEEPING_PAYLOAD, data)
     return (
         f"HK   mode={MODE.get(mode, mode)} payload={'ON(' + str(payload_on_time) + 's)' if payload else 'OFF'} "
         f"cmd(ok={accepted} ng={rejected} last={COMMAND.get(last_command, 'NONE')}) rssi={rssi}dBm "
@@ -211,7 +240,11 @@ def format_housekeeping(data):
         + (f"({format_utc(last_start)} {last_length}s)" if last_result else "")
         + f" done={completed}"
         + (f" lamp={LAMP_COLOR.get(lamp_color, lamp_color)}({lamp_remaining}s)" if lamp_color else "")
-        + f" rec={RECORDER_STATE.get(rec_state, rec_state)}({rec_records}, free {rec_free}MB)"
+        + f" rec={RECORDER_STATE.get(rec_state, rec_state)}({rec_records}, free {rec_free}MB,"
+        f" pending bus {bus_pending}KB gnss {gnss_pending}KB,"
+        f" released bus {format_utc(bus_released)} gnss {format_utc(gnss_released)})"
+        + (f" dump={RECORDER_SOURCE.get(dump_source, dump_source)}(sent {dump_sent}, left {dump_remaining}KB)"
+           if dump_state else "")
     )
 
 
@@ -274,6 +307,12 @@ def format_event(data):
         detail = "payload off" if arg1 == 1 else f"not nominal ({MODE.get(arg2, arg2)})"
     elif name == "OBSERVATION_CANCELLED":
         detail = "while active" if arg1 else "scheduled"
+    elif name == "DUMP_STARTED":
+        detail = f"{RECORDER_SOURCE.get(arg1, arg1)} {arg2}KB"
+    elif name == "DUMP_ENDED":
+        detail = f"{DUMP_END.get(arg1, arg1)} sent={arg2}"
+    elif name == "RECORDER_CLEARED":
+        detail = f"{RECORDER_SOURCE.get(arg1, arg1)} {arg2} files"
     else:
         detail = f"arg1={arg1} arg2={arg2}"
     return f"EVT  {EVENT_SEVERITY.get(severity, severity)} {name} {detail}"
@@ -293,12 +332,28 @@ def format_telecommand(data):
     return f"TC   seq={header['seq']} {COMMAND.get(command_id, command_id)} args={args.hex() or '-'}"
 
 
+def dumped_packet(data):
+    """ダンプのパケットの中の、記録したパケットを取り出す"""
+    inner = data[payload_offset(data):]
+    decode_header(inner)  # 中が正しいパケットか確かめる (正しくなければ ValueError)
+    return inner
+
+
+def format_dump(data):
+    inner = dumped_packet(data)
+    header = decode_header(inner)
+    formatter = FORMATTERS.get(header["apid"])
+    text = formatter(inner) if formatter else f"unknown APID {header['apid']}"
+    return f"DUMP apid={header['apid']} seq={header['seq']:5d} {format_packet_time(header['time_ms'])}{text}"
+
+
 FORMATTERS = {
     APID_GNSS: format_gnss,
     APID_HOUSEKEEPING: format_housekeeping,
     APID_ACK: format_ack,
     APID_EVENT: format_event,
     APID_OBSERVATION: format_observation,
+    APID_DUMP: format_dump,
 }
 
 
@@ -378,24 +433,37 @@ def main():
     parser.add_argument("--port", type=int, default=10015, help="待ち受けるUDPポート (default: 10015)")
     parser.add_argument("--raw", action="store_true", help="受信したバイト列も16進で表示する")
     parser.add_argument("--forward", metavar="HOST:PORT", help="受信したパケットをそのまま転送する先 (例: YAMCS)")
+    parser.add_argument("--dump-forward", metavar="HOST:PORT",
+                        help="ダンプ (APID 105) の中のパケットを転送する先 (例: YAMCS のダンプ用のリンク)")
+    parser.add_argument("--dump-stats", metavar="PATH",
+                        help="ダンプで受け取った数と、リアルタイムで受け取り済みで送らなかったイベントの数を書くファイル"
+                             " (yamcs/.../scripts/dump_recorder.py が、降ろせたかの確認に使う)")
+    parser.add_argument("--yamcs", default="http://localhost:8090",
+                        help="ダンプで届いたイベントが、もう Events にあるかを聞く YAMCS (default: http://localhost:8090)")
+    parser.add_argument("--instance", default="gnss", help="YAMCS のインスタンス (default: gnss)")
     parser.add_argument("--uplink-port", type=int, help="YAMCSからTCを受け取る 127.0.0.1 のUDPポート (例: 10025)")
     parser.add_argument("--satellite-tc-port", type=int, default=10025, help="衛星がTCを待ち受けるポート (default: 10025)")
     parser.add_argument("--serial", metavar="PATH", help="地上局の無線機 (M5StickC) のシリアルポート")
     parser.add_argument("--baud", type=int, default=115200, help="シリアルの速度 (default: 115200)")
     args = parser.parse_args()
 
-    forward_to = None
-    if args.forward:
-        host, _, port = args.forward.rpartition(":")
-        forward_to = (host or "127.0.0.1", int(port))
+    def address(text):
+        host, _, port = text.rpartition(":")
+        return (host or "127.0.0.1", int(port))
+
+    forward_to = address(args.forward) if args.forward else None
+    dump_forward_to = address(args.dump_forward) if args.dump_forward else None
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((args.host, args.port))
     print(f"Listening on udp://{args.host}:{args.port} (Ctrl+C to stop)")
     forward_sock = None
-    if forward_to:
+    if forward_to or dump_forward_to:
         forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    if forward_to:
         print(f"Forwarding to udp://{forward_to[0]}:{forward_to[1]}")
+    if dump_forward_to:
+        print(f"Forwarding dumps to udp://{dump_forward_to[0]}:{dump_forward_to[1]}")
     uplink_sock = None
     satellite_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     if args.uplink_port:
@@ -444,15 +512,69 @@ def main():
     if args.serial:
         connect_serial()
 
-    def handle_telemetry(data, origin, route):
-        nonlocal satellite_route
-        if forward_sock:
-            # 中身の検査は転送先(YAMCS)に任せ、届いたものはすべて転送する。
-            # 転送先が止まっていても受信は続ける
+    def forward(data, target):
+        # 転送先が止まっていても受信は続ける
+        if forward_sock and target:
             try:
-                forward_sock.sendto(data, forward_to)
+                forward_sock.sendto(data, target)
             except OSError:
                 pass
+
+    # ダンプで届いたイベントが、もう YAMCS の Events にあれば (リアルタイムで届いていれば) 送らない。
+    # パケットとパラメータは、YAMCS のアーカイブが時刻 + シーケンス番号で重なりを1つにする。
+    # イベントは YAMCS が1つずつ別の番号を付けるので、ここで止めないと Events に2つ出る。
+    # 受信スクリプトが受け取ったかではなく、YAMCS に入ったかで決める
+    # (YAMCS のリンクを止めている間 (パスの外) は、受信スクリプトには届いても YAMCS には入らない)
+    dump_stats = {"received": 0, "skipped_events": 0}
+
+    def event_archived(time_ms):
+        start = datetime.datetime.fromtimestamp(time_ms / 1000, datetime.timezone.utc)
+        stop = start + datetime.timedelta(milliseconds=1)
+        query = urllib.parse.urlencode([("start", start.isoformat()), ("stop", stop.isoformat()),
+                                        ("source", "M5Sat"), ("source", "M5Sat/dump")])
+        try:
+            with urllib.request.urlopen(f"{args.yamcs}/api/archive/{args.instance}/events?{query}", timeout=2) as res:
+                return bool(json.load(res).get("events"))
+        except (OSError, ValueError):
+            # YAMCS に聞けなければ送る (2つ出るほうが、無くなるよりよい)
+            return False
+
+    def write_dump_stats():
+        if not args.dump_stats:
+            return
+        try:
+            tmp = args.dump_stats + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(dump_stats, f)
+            os.replace(tmp, args.dump_stats)
+        except OSError:
+            pass
+
+    def event_time(packet):
+        """イベントのパケットなら機上時刻 (ミリ秒) を返す"""
+        header = decode_header(packet)
+        return header["time_ms"] if header["apid"] == APID_EVENT else None
+
+    def handle_telemetry(data, origin, route):
+        nonlocal satellite_route
+        # ダンプは中のパケットを取り出してダンプ用のリンクへ、ほかはそのままリアルタイムのリンクへ送る。
+        # リアルタイムのほうは、中身の検査を転送先(YAMCS)に任せ、届いたものはすべて転送する
+        is_dump = len(data) >= PRIMARY_HEADER.size and (PRIMARY_HEADER.unpack_from(data)[0] & 0x07FF) == APID_DUMP
+        if is_dump:
+            try:
+                inner = dumped_packet(data)
+                dump_stats["received"] += 1
+                t = event_time(inner)
+                if not t or not event_archived(t):
+                    forward(inner, dump_forward_to)
+                else:
+                    dump_stats["skipped_events"] += 1
+                write_dump_stats()
+            except ValueError:
+                pass
+        else:
+            data = with_reception_time(data) if len(data) >= PRIMARY_HEADER.size else data
+            forward(data, forward_to)
         if args.raw:
             print(f"[{origin}] {data.hex(' ')}")
 
