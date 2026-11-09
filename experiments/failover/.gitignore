@@ -1,0 +1,6 @@
+# 実験の実行時ファイル (start.sh が本体からコピーするものと、保存データ・ログ)
+*/src/main/yamcs/mdb/
+*/src/main/yamcs/etc/processor.yaml
+*/target/
+.run/
+logs/
