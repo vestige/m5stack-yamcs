@@ -1,0 +1,63 @@
+# Standby 系のインスタンス。ふだんは Active 系から複製を受け取るだけで、
+# 地上局とのリンク (TM・TC) は起動時から無効にしておく。切替 (tools/failover.py) で有効にする
+services:
+  - class: org.yamcs.archive.XtceTmRecorder
+  - class: org.yamcs.archive.ParameterRecorder
+  - class: org.yamcs.archive.AlarmRecorder
+  - class: org.yamcs.archive.EventRecorder
+  - class: org.yamcs.archive.ReplayServer
+  - class: org.yamcs.ProcessorCreatorService
+    args:
+      name: realtime
+      type: realtime
+  - class: org.yamcs.archive.CommandHistoryRecorder
+  # Active 系の ReplicationServer (127.0.0.1:8099) へ接続し、TM とコマンド履歴を受け取る
+  - class: org.yamcs.replication.ReplicationSlave
+    args:
+      tcpRole: client
+      masterHost: 127.0.0.1
+      masterPort: 8099
+      masterInstance: m5sat
+      enableTls: false
+      reconnectionIntervalSec: 5
+      streams: ["tm_realtime", "cmdhist_realtime"]
+
+dataLinks:
+  - name: sat-tm
+    class: org.yamcs.tctm.UdpTmDataLink
+    stream: tm_realtime
+    port: 10216
+    enabledAtStartup: false
+    packetPreprocessorClassName: org.yamcs.tctm.GenericPacketPreprocessor
+    packetPreprocessorArgs:
+      timestampOffset: 6
+      timeEncoding:
+        type: FIXED
+        size: 8
+        epoch: UNIX
+      seqCountOffset: 0
+  - name: sat-tc
+    class: org.yamcs.tctm.UdpTcDataLink
+    stream: tc_realtime
+    host: 127.0.0.1
+    port: 10126
+    commandPostprocessorClassName: org.yamcs.tctm.IssCommandPostprocessor
+    # 二重送信を防ぐ: Standby 系の TC は起動時から無効
+    enabledAtStartup: false
+
+mdb:
+  - type: xtce
+    args:
+      file: mdb/m5sat.xml
+
+streamConfig:
+  tm:
+    - name: "tm_realtime"
+      processor: "realtime"
+  cmdHist: ["cmdhist_realtime"]
+  event: ["events_realtime"]
+  param: ["pp_realtime", "sys_param", "proc_param"]
+  parameterAlarm: ["alarms_realtime"]
+  tc:
+    - name: "tc_realtime"
+      processor: "realtime"

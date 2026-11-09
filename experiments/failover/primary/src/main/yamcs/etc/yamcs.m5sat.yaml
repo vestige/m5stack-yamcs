@@ -1,0 +1,56 @@
+# Active 系のインスタンス。地上局 (tools/fake_sat.py) と TM・TC をやりとりし、
+# 受け取った TM とコマンド履歴を Standby 系へ複製する
+services:
+  - class: org.yamcs.archive.XtceTmRecorder
+  - class: org.yamcs.archive.ParameterRecorder
+  - class: org.yamcs.archive.AlarmRecorder
+  - class: org.yamcs.archive.EventRecorder
+  - class: org.yamcs.archive.ReplayServer
+  - class: org.yamcs.ProcessorCreatorService
+    args:
+      name: realtime
+      type: realtime
+  - class: org.yamcs.archive.CommandHistoryRecorder
+  # tm_realtime と cmdhist_realtime を Standby 系へ送る (送信ログは既定で7日保持)
+  - class: org.yamcs.replication.ReplicationMaster
+    args:
+      tcpRole: server
+      streams: ["tm_realtime", "cmdhist_realtime"]
+
+dataLinks:
+  # enabledAtStartup は書かない。書かなければ、前回の有効・無効の状態を引き継ぐ (実験 E7 で確かめる)
+  - name: sat-tm
+    class: org.yamcs.tctm.UdpTmDataLink
+    stream: tm_realtime
+    port: 10116
+    packetPreprocessorClassName: org.yamcs.tctm.GenericPacketPreprocessor
+    packetPreprocessorArgs:
+      timestampOffset: 6
+      timeEncoding:
+        type: FIXED
+        size: 8
+        epoch: UNIX
+      seqCountOffset: 0
+  - name: sat-tc
+    class: org.yamcs.tctm.UdpTcDataLink
+    stream: tc_realtime
+    host: 127.0.0.1
+    port: 10125
+    commandPostprocessorClassName: org.yamcs.tctm.IssCommandPostprocessor
+
+mdb:
+  - type: xtce
+    args:
+      file: mdb/m5sat.xml
+
+streamConfig:
+  tm:
+    - name: "tm_realtime"
+      processor: "realtime"
+  cmdHist: ["cmdhist_realtime"]
+  event: ["events_realtime"]
+  param: ["pp_realtime", "sys_param", "proc_param"]
+  parameterAlarm: ["alarms_realtime"]
+  tc:
+    - name: "tc_realtime"
+      processor: "realtime"

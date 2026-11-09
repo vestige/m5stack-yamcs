@@ -1,0 +1,18 @@
+# 冗長化の実験: Active 系 (いつも運用している系)
+# サーバの名前。2つの系を同じ Mac で動かすので、それぞれに付ける。付けないとどちらもホスト名になり、
+# レプリケーションで Standby 系が「自分が出したデータ」と見なして、受け取った TM をすべて捨ててしまう
+serverId: m5sat-primary
+services:
+  - class: org.yamcs.http.HttpServer
+    args:
+      port: 8190
+      address: "0.0.0.0"
+  # Standby 系の ReplicationSlave が、ここへ接続してくる
+  - class: org.yamcs.replication.ReplicationServer
+    args:
+      port: 8099
+
+dataDir: yamcs-data
+instances:
+  - m5sat
+secretKey: changeme-primary
