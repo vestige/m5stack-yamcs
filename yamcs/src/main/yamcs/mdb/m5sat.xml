@@ -479,7 +479,7 @@
 			<AlgorithmSet>
 				<!--
 				  衛星はイベントの番号と数値だけを送ってくるので、ここで文章にして YAMCS の Events に出す。
-				  過去データの再生で同じイベントが重複しないよう、リアルタイムとダンプのプロセッサのときだけ出す。
+				  過去データの再生で同じイベントが重複しないよう、リアルタイムとダンプのプロセッサ (recorder、#62) のときだけ出す。
 				  イベントの時刻は、衛星で起きた時刻 (パケットの機上時刻) にする。
 				  ダンプで届いたイベント (#56) は、送り元 M5Sat/dump として出す。リアルタイムで受け取り済みのイベントは、
 				  tools/udp_receiver.py がダンプのリンクに送らないので、ここには来ない (Events に2つ出ない)。
@@ -487,7 +487,7 @@
 				<CustomAlgorithm name="SatelliteEventMessage">
 					<AlgorithmText language="JavaScript"><![CDATA[
 var processor = Yamcs.processorName();
-if (processor != "realtime" && processor != "dump") return;
+if (processor != "realtime" && processor != "recorder") return;
 
 var MODE = ["SAFE", "NOMINAL", "MISSION"];
 var COMMAND = ["NONE", "NO_OP", "SET_MODE", "SET_TM_INTERVAL", "PAYLOAD_POWER", "RESET_COUNTERS", "BEEP", "SET_FDIR",
@@ -573,7 +573,7 @@ switch (eventId.value) {
     message = "不明なイベント (" + eventId.rawValue + ", " + a1 + ", " + a2 + ")";
 }
 
-var event = {source: processor == "dump" ? "M5Sat/dump" : "M5Sat", type: String(eventId.value), message: message};
+var event = {source: processor == "recorder" ? "M5Sat/dump" : "M5Sat", type: String(eventId.value), message: message};
 if (Number(packetTime.rawValue) > 0) event.time = new Date(Number(packetTime.rawValue)).toISOString();
 switch (severity.value) {
   case "WATCH": EventLog.watch(event); break;

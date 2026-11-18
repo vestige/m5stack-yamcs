@@ -14,10 +14,12 @@ services:
       name: realtime
       type: realtime
   # ダンプ (#56) で届いたパケットを処理するプロセッサ。イベントの文章を作るアルゴリズムを動かすためだけに使う
-  # (運用画面の値やアラームはリアルタイムのプロセッサのまま。processor.yaml の dump)
+  # (運用画面の値やアラームはリアルタイムのプロセッサのまま。processor.yaml の dump)。
+  # 名前は realtime より後に並ぶものにする (#62)。YAMCS の画面は、名前の順で最初のプロセッサを既定に選ぶので、
+  # dump という名前だと画面がこちらを選び、運用画面の値が出なくなる
   - class: org.yamcs.ProcessorCreatorService
     args:
-      name: dump
+      name: recorder
       type: dump
   - class: org.yamcs.archive.CommandHistoryRecorder
   - class: org.yamcs.parameterarchive.ParameterArchive
@@ -106,7 +108,7 @@ streamConfig:
     - name: "tm_realtime"
       processor: "realtime"
     - name: "tm_dump"
-      processor: "dump"
+      processor: "recorder"
   cmdHist: ["cmdhist_realtime", "cmdhist_dump"]
   event: ["events_realtime", "events_dump"]
   param: ["pp_realtime", "pp_dump", "sys_param", "proc_param"]

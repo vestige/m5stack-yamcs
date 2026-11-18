@@ -946,7 +946,7 @@ python3 tools/read_recording.py /Volumes/M5SAT/rec --summary    # ファイル�
 データレコーダ（#55）の記録を、パスの間に地上へ降ろすようにしました（[issue #56](https://github.com/vestige/m5stack-yamcs/issues/56)、親は [#34](https://github.com/vestige/m5stack-yamcs/issues/34)）。パスの外で地上に届かなかった HK・イベント・観測データが、衛星で作った時刻でアーカイブに入り、Grafana のグラフの空白も埋まります。上の「発展」にある「データレコーダと後送り（Store and Forward）」にあたります。
 
 ```text
-衛星 ──ダンプ (APID 105) ──▶ udp_receiver.py ──中のパケット──▶ :10017 YAMCS m5stack-dump ─▶ tm_dump ─▶ プロセッサ dump
+衛星 ──ダンプ (APID 105) ──▶ udp_receiver.py ──中のパケット──▶ :10017 YAMCS m5stack-dump ─▶ tm_dump ─▶ プロセッサ recorder
                                                                                      └─▶ アーカイブ (衛星で作った時刻)
 ```
 
