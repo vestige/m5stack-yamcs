@@ -987,13 +987,22 @@ python3 tools/read_recording.py /Volumes/M5SAT/rec --summary    # ファイル�
 
 **パスの手順**：[tools/plan_passes.py](tools/plan_passes.py) で作るパスでは、通信の確認のあとに、アクティビティ「ダンプ」（[yamcs/src/main/yamcs/etc/scripts/dump_recorder.py](yamcs/src/main/yamcs/etc/scripts/dump_recorder.py)）が自動で動きます。
 
-1. `DUMP_RECORDER`（ALL、印から今まで）を送る
-2. HK の `DumpState` が IDLE に戻るまで待つ（90秒で降ろしきれなければ `STOP_DUMP` を送り、消さずに失敗で終わる）
-3. 衛星が送った数（`DumpSent`）と、地上が受け取った数（ダンプのリンクが受け取った数 + 受信スクリプトが「もう Events にある」として送らなかったイベントの数。`.run/dump_stats.json`）を比べる
-4. そろっていれば `CLEAR_RECORDER`（Before = 1 の時刻）で印を進める。足りなければ消さずに失敗で終わり、次のパスでもう一度降ろす
+長くパスがなかった分は1回では降ろしきれないので、印から区切りながら降ろし、数がそろった区切りまで印を進めます（#69）。パスを重ねるごとに、たまった分が少しずつ減ります。区切り1つの手順は次の通りです。
+
+1. `DUMP_RECORDER`（ALL、印から区切りの終わりまで）を送る。区切りの長さは初め10分ぶんで、降ろした量を見て、残りの時間に収まる長さに変える
+2. 衛星の ACK を待ち、そのあとに地上が受け取った HK で降ろす量（`DumpRemainingKB`）を見る。残りの時間に収まらなければ `STOP_DUMP` して、区切りを短くしてやり直す
+3. HK の `DumpState` が IDLE に戻るまで待つ
+4. 衛星が送った数（`DumpSent`）と、地上が受け取った数（ダンプのリンクが受け取った数 + 受信スクリプトが「もう Events にある」として送らなかったイベントの数。`.run/dump_stats.json`）を比べる
+5. そろっていれば `CLEAR_RECORDER`（Before = 区切りの終わり）で印を進め、時間が残っていれば次の区切りへ。足りなければ消さずに失敗で終わり、次のパスで同じ所からもう一度降ろす
+
+全部で90秒まで使い、残りは次のパスに回します。
+
+**衛星と地上の時計のずれ**：衛星の時計（機上時刻）は、地上の時計と2秒ほどずれていたことがあります（#69）。コマンドのあとの HK かどうかを、衛星が HK を作った時刻で決めると、コマンドを実行する前の HK を「あと」と取り違えます。手順では、地上が受け取った時刻（`acquisitionTime`）で決めています。
 
 手順のログ（「衛星が送った数 N、地上が受け取った数 N」）は、YAMCS の **Activities** で `dump_recorder.py` の行を開くと見られます。左メニューの **Scripts** から手で動かすこともできます。
 
-**1回のパスで降ろせる量**：約4〜5KB/秒 × 通信の確認のあとに残る時間（約90秒）で、およそ 400KB。NOMINAL のとき、HK などの bus が1時間に約 240KB、GNSS が約 130KB たまるので、パスの間隔が1時間ほどなら1回で降ろしきれます（MISSION の間は観測データの分が増える）。間隔が長いときや、何かあったときは、`Start` / `End` で範囲を決めたり、`Source` を BUS にして HK とイベントだけを先に降ろしたりします。
+**スクリプトを直したとき**：YAMCS は起動するときに `yamcs/src/main/yamcs/etc/scripts/` を `yamcs/target/yamcs/etc/scripts/` に写し、その写しを動かします。`dump_recorder.py` や `set_links.py` を直したら、YAMCS を再起動してください（`scripts/stop.sh` のあと `scripts/start.sh`）。再起動しないと、Timeline や Scripts からは前のスクリプトが動きます。
+
+**1回のパスで降ろせる量**：約4〜5KB/秒 × 通信の確認のあとに残る時間（約90秒）で、およそ 400KB。NOMINAL のとき、HK などの bus が1時間に約 240KB、GNSS が約 130KB たまるので、パスの間隔が1時間ほどなら1回で降ろしきれます（MISSION の間は観測データの分が増える）。3週間パスがなかったときは 11.7MB たまっていて、全部を降ろすには1時間ほどかかりました（#69）。区切って降ろすので、1回のパスで降ろせる分ずつ減っていきます。急ぐときや、何かあったときは、`Start` / `End` で範囲を決めたり、`Source` を BUS にして HK とイベントだけを先に降ろしたりします。
 
 **運用シナリオ**：[docs/scenarios.md](docs/scenarios.md#dump) を見てください。
