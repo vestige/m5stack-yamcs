@@ -1,6 +1,6 @@
 # YAMCS Web UI のメニュー
 
-YAMCS 5.13 の Web UI（http://localhost:8090）で、インスタンスを開いたときの左メニューの一覧です。各メニューが何をする所か、衛星運用ではどんな役割を持つかをまとめています。
+YAMCS 5.13.7 の Web UI（http://localhost:8090）で、インスタンスを開いたときの左メニューの一覧です。各メニューが何をする所か、衛星運用ではどんな役割を持つかをまとめています。
 
 実際の操作の手順は [scenarios.md](scenarios.md)、本物の衛星運用との対応は [real-operations.md](real-operations.md) を見てください。
 
@@ -22,11 +22,11 @@ YAMCS 5.13 の Web UI（http://localhost:8090）で、インスタンスを開�
 | | Queues | 送信前のコマンドを溜めておく待ち行列。人が承認してから送る、という運用ができる | 重要なコマンドの承認フロー |
 | | Clearances | 運用者ごとに、送ってよいコマンドの重要度の上限を決める | 権限管理 |
 | **File transfer** | | 衛星と地上の間でファイルを送受信する（CFDP） | 観測ファイルのダウンロードなど |
-| **Procedures** | Stacks | 複数のコマンドを順番に並べた「コマンドスタック」を作って実行する | 運用手順書。「観測開始手順」など |
-| | Run a script | 運用スクリプトを実行する | 手順の自動化 |
+| **Stacks** | | 複数のコマンドを順番に並べた「コマンドスタック」を作って実行する | 運用手順書。「観測開始手順」など |
+| **Scripts** | | 運用スクリプト（`etc/scripts/` のもの）を手で実行する | 手順の自動化 |
 | **Timeline** | Bands など | 時間軸の上に予定（アイテム）を帯（バンド）状に並べる | 運用計画。パスや観測の予定 |
 | **Activities** | | 手順やスクリプトの実行記録 | 誰がいつ何を実行したかのログ |
 | **Mission database** | Overview / Parameters / Parameter types / Containers / Commands / Algorithms | 読み込んだMDBの中身を閲覧する | 定義の確認 |
 | **Archive browser** | | 保存されたデータを時間軸で俯瞰する。データの抜け（途切れ）もわかる | パス後の振り返り、記録データの後送りの確認 |
 
-メニューの一覧は、YAMCS 5.13.0 のソースコード（`yamcs-web` の `instance-layout.component`）をもとにしています。
+メニューの一覧は、YAMCS 5.13.7 のソースコード（`yamcs-web` の `instance-layout.component`）をもとにしています。5.13.0 では Stacks と Run a script が **Procedures** の下にまとまっていました（5.13.1 で Automation に名前が変わり、5.13.5 からはそれぞれが左メニューの項目になりました。#67）。
