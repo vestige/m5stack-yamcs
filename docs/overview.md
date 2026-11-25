@@ -120,7 +120,7 @@ Mac の `tools/udp_receiver.py` は、地上局の中で、電波と管制局の
 | Alarms / Events | 異常に気づく | MDB の DefaultAlarm、イベントのアルゴリズム |
 | Commanding | コマンドを送り、届いて実行されたかを確かめる（Command Verification） | MDB の MetaCommand |
 | Queues | 大事なコマンドは、もう一人が承認するまで送らない（二人確認） | `etc/command-queue.yaml` |
-| Procedures（Stacks） | 運用手順書。1行ずつ確かめながらコマンドを送る | `yamcs/src/main/yamcs/stacks/` |
+| Stacks | 運用手順書。1行ずつ確かめながらコマンドを送る | `yamcs/src/main/yamcs/stacks/` |
 | Timeline | パスと観測の計画。予定の時刻に手順を自動で始める | `tools/plan_passes.py` |
 | Archive | 届いたものを全部残し、あとから振り返る | `yamcs/target/yamcs/yamcs-data/` |
 
@@ -211,7 +211,7 @@ stateDiagram-v2
 | 衛星が地上局から見える時間（パス）は1回十数分 | 模擬している。Timeline で人工のパスを作り、パスの外ではデータリンクを止める（`tools/plan_passes.py`） |
 | 異常を自分で検知して SAFE へ逃げる（FDIR） | 模擬している。GPS のケーブルを抜くと起きる |
 | 大事なコマンドの二人確認 | 模擬している（Queues） |
-| 運用手順書 | 模擬している（Procedures の Stacks） |
+| 運用手順書 | 模擬している（Stacks） |
 | 運用の訓練（シミュレータに異常を入れる） | 模擬している。出題者が `tools/inject_fault.py` で、運用者に見えない経路から異常を起こす。本物と違い、衛星（M5Stack）がシミュレータの役も兼ねる |
 | 軌道・姿勢・電力・温度 | 模擬していない。M5Sat は机の上にある |
 | 電波の距離・遅延・雑音 | 模擬していない。M5Stack を持って離れると、本当に電波が弱くなって途切れる（ESP-NOW） |

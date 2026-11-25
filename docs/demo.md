@@ -62,7 +62,7 @@
 | 5 | **Commanding → Command history** |
 | 6 | **Commanding → Queues** |
 | 7 | **Alarms** |
-| 8 | **Procedures → Stacks** |
+| 8 | **Stacks** |
 | 9 | **Timeline**（ビュー「パス運用」。まだ無ければ、場面 5 で作る） |
 
 ターミナルは、リポジトリのフォルダで1つ開いておきます。

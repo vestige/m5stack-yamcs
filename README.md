@@ -298,7 +298,7 @@ M5Stackを1機の衛星に見立てて、YAMCSを地上局として運用する�
 | 5-4 | 運用モードと異常時の自動退避（FDIR） | Alarms, Events |
 | 5-5 | コマンドの安全装置 | Mission database, Commanding（Queues） |
 | 5-6 | ペイロード運用と観測データ | Telemetry, Commanding |
-| 5-7 | 運用手順（コマンドスタック） | Procedures（Stacks） |
+| 5-7 | 運用手順（コマンドスタック） | Stacks |
 | 5-8 | 運用画面 | Displays（OPI、Parameter Table） |
 | 5-9 | Timeline とパス運用 | Timeline, Links, Archive browser |
 | 5-10 | 異常対応の訓練 | Alarms, Events, Command history |
@@ -573,7 +573,7 @@ HKには、観測の状態を表す項目を追加しました（HKのパケッ�
 
 #### 5-7 運用手順（コマンドスタック） ✅
 
-決まった作業の手順を、YAMCSのコマンドスタック（Procedures → Stacks）として用意しました。本物の運用での手順書の役割です。
+決まった作業の手順を、YAMCSのコマンドスタック（左メニューの **Stacks**）として用意しました。本物の運用での手順書の役割です。
 
 | スタック | 手順 |
 | --- | --- |
@@ -992,7 +992,7 @@ python3 tools/read_recording.py /Volumes/M5SAT/rec --summary    # ファイル�
 3. 衛星が送った数（`DumpSent`）と、地上が受け取った数（ダンプのリンクが受け取った数 + 受信スクリプトが「もう Events にある」として送らなかったイベントの数。`.run/dump_stats.json`）を比べる
 4. そろっていれば `CLEAR_RECORDER`（Before = 1 の時刻）で印を進める。足りなければ消さずに失敗で終わり、次のパスでもう一度降ろす
 
-手順のログ（「衛星が送った数 N、地上が受け取った数 N」）は、YAMCS の **Activities** で `dump_recorder.py` の行を開くと見られます。Procedures から手で動かすこともできます。
+手順のログ（「衛星が送った数 N、地上が受け取った数 N」）は、YAMCS の **Activities** で `dump_recorder.py` の行を開くと見られます。左メニューの **Scripts** から手で動かすこともできます。
 
 **1回のパスで降ろせる量**：約4〜5KB/秒 × 通信の確認のあとに残る時間（約90秒）で、およそ 400KB。NOMINAL のとき、HK などの bus が1時間に約 240KB、GNSS が約 130KB たまるので、パスの間隔が1時間ほどなら1回で降ろしきれます（MISSION の間は観測データの分が増える）。間隔が長いときや、何かあったときは、`Start` / `End` で範囲を決めたり、`Source` を BUS にして HK とイベントだけを先に降ろしたりします。
 

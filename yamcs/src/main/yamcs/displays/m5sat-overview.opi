@@ -236,6 +236,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -444,6 +445,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -510,6 +512,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -576,6 +579,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -642,6 +646,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -708,6 +713,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
@@ -835,6 +841,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -901,6 +908,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -967,6 +975,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1033,6 +1042,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1099,6 +1109,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1165,6 +1176,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1321,6 +1333,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1387,6 +1400,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
@@ -1514,6 +1528,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1580,6 +1595,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1646,6 +1662,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1741,6 +1758,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1807,6 +1825,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -1873,6 +1892,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
@@ -1910,6 +1930,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -2005,6 +2026,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -2071,6 +2093,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
@@ -2108,6 +2131,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -2174,6 +2198,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
@@ -2301,6 +2326,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
@@ -2338,6 +2364,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -2404,6 +2431,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -2470,6 +2498,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -2536,6 +2565,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Rectangle" version="1.0.0">
@@ -2921,6 +2951,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -2987,6 +3018,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -3053,6 +3085,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -3148,6 +3181,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -3214,6 +3248,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -3222,7 +3257,7 @@
     <wuid>w100</wuid>
     <x>870</x>
     <y>587</y>
-    <width>60</width>
+    <width>45</width>
     <height>22</height>
     <visible>true</visible>
     <enabled>true</enabled>
@@ -3249,9 +3284,9 @@
     <widget_type>Text Update</widget_type>
     <name>/M5Sat/Bus/RecorderBusPendingKB</name>
     <wuid>w101</wuid>
-    <x>930</x>
+    <x>915</x>
     <y>587</y>
-    <width>54</width>
+    <width>61</width>
     <height>22</height>
     <visible>true</visible>
     <enabled>true</enabled>
@@ -3280,15 +3315,16 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.TextUpdate" version="1.0.0">
     <widget_type>Text Update</widget_type>
     <name>/M5Sat/Bus/RecorderGnssPendingKB</name>
     <wuid>w102</wuid>
-    <x>988</x>
+    <x>979</x>
     <y>587</y>
-    <width>52</width>
+    <width>61</width>
     <height>22</height>
     <visible>true</visible>
     <enabled>true</enabled>
@@ -3317,6 +3353,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -3412,6 +3449,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
   <widget typeId="org.csstudio.opibuilder.widgets.Label" version="1.0.0">
@@ -3478,6 +3516,7 @@
     <show_units>true</show_units>
     <show_lohi>false</show_lohi>
     <auto_size>false</auto_size>
+    <rotation_angle>0.0</rotation_angle>
     <wrap_words>false</wrap_words>
   </widget>
 </display>
