@@ -214,7 +214,8 @@ def clear(args):
             quoted = urllib.parse.quote(item["id"], safe="")
             request(args, f"/timeline/{args.instance}/items/{quoted}?source=rdb", method="DELETE")
             removed += 1
-    for link in ["m5stack-gnss", "m5stack-tc"]:
+    # パスの終わりに set_links.py disable が止めるリンク (TM・ダンプ・TC) を、すべて有効に戻す (#64)
+    for link in ["m5stack-gnss", "m5stack-dump", "m5stack-tc"]:
         request(args, f"/links/{args.instance}/{link}:enable", {})
     kept = len(items) - removed
     print(f"予定を {removed} 件消し、データリンクを有効に戻しました (常時通信)")
